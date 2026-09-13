@@ -18,7 +18,7 @@ export default function HeroVisual() {
   const { loaded } = useLoading();
 
   return (
-    <div className="pointer-events-none absolute right-0 top-0 z-[5] h-[170vh] w-[75vw] max-w-[560px] md:w-[55vw] md:max-w-[900px]">
+    <div className="pointer-events-none absolute right-0 top-0 z-[5] h-[100vh] w-[52vw] max-w-[260px] md:h-[170vh] md:w-[55vw] md:max-w-[900px]">
 
       <motion.div
         variants={glowVariants}

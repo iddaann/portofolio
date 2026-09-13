@@ -4,11 +4,11 @@ import { motion } from "motion/react";
 import ProjectCard from "./ProjectCard";
 
 const projects = [
-  { index: "01", title: "KindMateCare", stack: "Laravel · Sanctum · Reverb", description: "Platform layanan kesehatan berbasis Laravel. Berperan sebagai backend developer: migrations, models, controllers, auth, hingga WebSocket real-time.", image: "/images/projects/kindmatecare.png" },
-  { index: "02", title: "Sellora", stack: "Flutter · Golang · Gin · MySQL", description: "Aplikasi pencatatan bisnis pribadi full-stack dengan arsitektur feature-first dan Riverpod di sisi frontend, Repository pattern di backend.", image: "/images/projects/sellora.png" },
-  { index: "03", title: "Our Journey Gallery", stack: "Next.js · Prisma · Better Auth · Cloudinary", description: "Galeri kenangan privat untuk pasangan, lengkap dengan peta lokasi interaktif dan upload media.", image: "/images/projects/journey-gallery.png" },
-  { index: "04", title: "FiltraLens", stack: "HTML · CSS · JS · Canvas API", description: "Studio filter foto berbasis browser dengan 12 preset filter piksel-demi-piksel, dikerjakan bersama tim untuk tugas Pengolahan Citra Digital.", image: "/images/projects/filtralens.png" },
-  { index: "05", title: "IoT Monitoring Dashboard", stack: "Golang · MQTT · WebSocket · MySQL", description: "Dashboard monitoring IoT real-time, dibangun selama internship di Telkom Corporate University Center.", image: "/images/projects/iot-dashboard.png" },
+  { index: "01", title: "KindMateCare", stack: "Laravel · Sanctum · Reverb", description: "Platform layanan kesehatan berbasis Laravel. Berperan sebagai backend developer: migrations, models, controllers, auth, hingga WebSocket real-time." },
+  { index: "02", title: "Sellora", stack: "Flutter · Golang · Gin · MySQL", description: "Aplikasi pencatatan bisnis pribadi full-stack dengan arsitektur feature-first dan Riverpod di sisi frontend, Repository pattern di backend." },
+  { index: "03", title: "Our Journey Gallery", stack: "Next.js · Prisma · Better Auth · Cloudinary", description: "Galeri kenangan privat untuk pasangan, lengkap dengan peta lokasi interaktif dan upload media." },
+  { index: "04", title: "FiltraLens", stack: "HTML · CSS · JS · Canvas API", description: "Studio filter foto berbasis browser dengan 12 preset filter piksel-demi-piksel, dikerjakan bersama tim untuk tugas Pengolahan Citra Digital." },
+  { index: "05", title: "IoT Monitoring Dashboard", stack: "Golang · MQTT · WebSocket · MySQL", description: "Dashboard monitoring IoT real-time, dibangun selama internship di Telkom Corporate University Center." },
 ];
 
 export default function Works() {
@@ -27,7 +27,7 @@ export default function Works() {
           </span>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-14 md:grid-cols-2">
           {projects.map((project, i) => (
             <ProjectCard key={project.title} project={project} position={i} />
           ))}

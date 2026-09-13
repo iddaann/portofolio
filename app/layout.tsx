@@ -19,8 +19,20 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ganti-dengan-domain-asli.vercel.app"),
   title: "Muhamad Ramdhani Fathul Muttaqin",
-  description: "Portfolio of Muhamad Ramdhani Fathul Muttaqin",
+  description:
+    "Portfolio Muhamad Ramdhani Fathul Muttaqin — Backend & Full-Stack Developer (Golang, Laravel, Next.js, React).",
+  openGraph: {
+    title: "Muhamad Ramdhani Fathul Muttaqin",
+    description: "Backend & Full-Stack Developer — Golang, Laravel, Next.js, React",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Muhamad Ramdhani Fathul Muttaqin",
+    description: "Backend & Full-Stack Developer — Golang, Laravel, Next.js, React",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

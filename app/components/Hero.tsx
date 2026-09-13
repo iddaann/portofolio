@@ -9,7 +9,7 @@ const nameVariants: Variants = {
     opacity: 1,
     x: 0,
     filter: "blur(0px)",
-    transition: { duration: 1.4, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 2, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
