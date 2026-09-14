@@ -1,223 +1,645 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 interface Star {
-  id: number;
+  x: number;
+  y: number;
+
   scatteredX: number;
   scatteredY: number;
-  hero13X?: number;
-  hero13Y?: number;
-  idanX?: number;
-  idanY?: number;
+
+  heroX: number;
+  heroY: number;
+
+  idanX: number;
+  idanY: number;
+
   size: number;
-  baseOpacity: number;
-  duration: number;
-  delay: number;
-  parallaxFactor: number;
+  opacity: number;
+  depth: number;
+
+  twinkleSpeed: number;
+  twinkleOffset: number;
+
+  driftX: number;
+  driftY: number;
 }
 
-const TOTAL_STARS = 250;
-const FORMATION_STAR_COUNT = 240;
+const STAR_COUNT = 420;
+const FORMATION_COUNT = 300;
 
-const HERO_BOX = { left: 30, top: 30, width: 40, height: 36 };
-const IDAN_BOX = { left: 8, top: 30, width: 84, height: 40 };
+const HERO_BOX = {
+  left: 30,
+  top: 28,
+  width: 40,
+  height: 40,
+};
+
+const IDAN_BOX = {
+  left: 8,
+  top: 30,
+  width: 84,
+  height: 40,
+};
 
 function sampleTextPoints(
   text: string,
-  canvasWidth: number,
-  canvasHeight: number,
+  width: number,
+  height: number,
   fontSize: number,
-  pointCount: number
-): { x: number; y: number }[] {
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return [];
+  count: number
+) {
+  const canvas = document.createElement("canvas");
 
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.fillStyle = "#fff";
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, canvasWidth / 2, canvasHeight / 2 + fontSize * 0.04);
+  canvas.width = width;
+  canvas.height = height;
 
-    const data = ctx.getImageData(0, 0, canvasWidth, canvasHeight).data;
-    const candidates: { x: number; y: number }[] = [];
+  const ctx = canvas.getContext("2d");
 
-    for (let y = 0; y < canvasHeight; y += 3) {
-      for (let x = 0; x < canvasWidth; x += 3) {
-        const alpha = data[(y * canvasWidth + x) * 4 + 3];
-        if (alpha > 128) {
-          candidates.push({ x: x / canvasWidth, y: y / canvasHeight });
-        }
+  if (!ctx) return [];
+
+  ctx.clearRect(0, 0, width, height);
+
+  ctx.fillStyle = "#fff";
+  ctx.font = `900 ${fontSize}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillText(text, width / 2, height / 2);
+
+  const image = ctx.getImageData(0, 0, width, height);
+  const points: { x: number; y: number }[] = [];
+
+  for (let y = 0; y < height; y += 3) {
+    for (let x = 0; x < width; x += 3) {
+      const alpha = image.data[(y * width + x) * 4 + 3];
+
+      if (alpha > 120) {
+        points.push({
+          x: x / width,
+          y: y / height,
+        });
       }
     }
-
-    for (let i = candidates.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
-    }
-
-    return candidates.slice(0, pointCount);
-  } catch (err) {
-    console.error(`StarBackground: gagal sampling teks "${text}"`, err);
-    return [];
   }
+
+  // Acak supaya distribusi bintang lebih natural
+  for (let i = points.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [points[i], points[j]] = [points[j], points[i]];
+  }
+
+  return points.slice(0, count);
+}
+
+function lerp(a: number, b: number, amount: number) {
+  return a + (b - a) * amount;
 }
 
 export default function StarBackground() {
-  const [stars, setStars] = useState<Star[]>([]);
-  const [canForm13, setCanForm13] = useState(false);
-  const [heroFormed, setHeroFormed] = useState(true);
-  const [idanInView, setIdanInView] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const [scrollVelocity, setScrollVelocity] = useState(0);
-  const tickingRef = useRef(false);
-  const prevScrollYRef = useRef(0);
-  const velocityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const isDesktop = window.innerWidth >= 768;
-    setCanForm13(isDesktop);
+    const canvas = canvasRef.current;
 
-    const hero13Points = isDesktop
-      ? sampleTextPoints("13", 400, 200, 170, FORMATION_STAR_COUNT)
-      : [];
-    const idanPoints = sampleTextPoints("IDAN", 800, 300, 220, FORMATION_STAR_COUNT);
+    if (!canvas) return;
 
-    const generated: Star[] = Array.from({ length: TOTAL_STARS }, (_, index) => {
-      const scatteredX = Math.random() * 100;
-      const scatteredY = Math.random() * 100;
+    const ctx = canvas.getContext("2d");
 
-      const p13 = hero13Points[index];
-      const pIdan = idanPoints[index];
+    if (!ctx) return;
 
-      return {
-        id: index,
-        scatteredX,
-        scatteredY,
-        hero13X: p13 ? HERO_BOX.left + p13.x * HERO_BOX.width : undefined,
-        hero13Y: p13 ? HERO_BOX.top + p13.y * HERO_BOX.height : undefined,
-        idanX: pIdan ? IDAN_BOX.left + pIdan.x * IDAN_BOX.width : undefined,
-        idanY: pIdan ? IDAN_BOX.top + pIdan.y * IDAN_BOX.height : undefined,
-        size: Math.random() * 2 + 0.5,
-        baseOpacity: Math.random() * 0.6 + 0.2,
-        duration: Math.random() * 4 + 3,
-        delay: Math.random() * 5,
-        parallaxFactor: Math.random() * 0.06 + 0.02,
-      };
-    });
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
 
-    setStars(generated);
-    prevScrollYRef.current = window.scrollY;
-  }, []);
+    let animationFrame = 0;
 
-  useEffect(() => {
-    const threshold = window.innerHeight * 0.65;
+    let targetScroll = window.scrollY;
+    let smoothScroll = window.scrollY;
 
-    const handleScroll = () => {
-      if (tickingRef.current) return;
-      tickingRef.current = true;
-      requestAnimationFrame(() => {
-        const current = window.scrollY;
-        const velocity = current - prevScrollYRef.current;
-        prevScrollYRef.current = current;
+    let targetMouseX = 0;
+    let targetMouseY = 0;
 
-        setScrollY(current);
-        setScrollVelocity(velocity);
+    let smoothMouseX = 0;
+    let smoothMouseY = 0;
 
-        if (canForm13) {
-          setHeroFormed(current < threshold);
-        }
+    let targetFormation = 0;
+    let currentFormation = 0;
 
-        if (velocityTimeoutRef.current) clearTimeout(velocityTimeoutRef.current);
-        velocityTimeoutRef.current = setTimeout(() => setScrollVelocity(0), 150);
+    /*
+      0 = scattered
+      1 = 13
+      2 = IDAN
+    */
 
-        tickingRef.current = false;
-      });
+    const stars: Star[] = [];
+
+    let idanVisible = false;
+
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      width = window.innerWidth;
+      height = window.innerHeight;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [canForm13]);
+    const createStars = () => {
+      stars.length = 0;
 
-  useEffect(() => {
-    const el = document.getElementById("idan-marker");
-    if (!el) {
-      console.error("StarBackground: elemen #idan-marker tidak ditemukan");
-      return;
-    }
+      const heroPoints =
+        width >= 768
+          ? sampleTextPoints(
+              "13",
+              500,
+              300,
+              210,
+              FORMATION_COUNT
+            )
+          : [];
 
-    const observer = new IntersectionObserver(
-      ([entry]) => setIdanInView(entry.isIntersecting),
-      { threshold: 0.45 }
+      const idanPoints = sampleTextPoints(
+        "IDAN",
+        1000,
+        300,
+        230,
+        FORMATION_COUNT
+      );
+
+      for (let i = 0; i < STAR_COUNT; i++) {
+        const scatteredX = Math.random() * width;
+        const scatteredY = Math.random() * height;
+
+        const heroPoint =
+          heroPoints[i % Math.max(heroPoints.length, 1)];
+
+        const idanPoint =
+          idanPoints[i % Math.max(idanPoints.length, 1)];
+
+        const heroX = heroPoint
+          ? HERO_BOX.left / 100 * width +
+            heroPoint.x * (HERO_BOX.width / 100 * width)
+          : scatteredX;
+
+        const heroY = heroPoint
+          ? HERO_BOX.top / 100 * height +
+            heroPoint.y * (HERO_BOX.height / 100 * height)
+          : scatteredY;
+
+        const idanX = idanPoint
+          ? IDAN_BOX.left / 100 * width +
+            idanPoint.x * (IDAN_BOX.width / 100 * width)
+          : scatteredX;
+
+        const idanY = idanPoint
+          ? IDAN_BOX.top / 100 * height +
+            idanPoint.y * (IDAN_BOX.height / 100 * height)
+          : scatteredY;
+
+        stars.push({
+          x: scatteredX,
+          y: scatteredY,
+
+          scatteredX,
+          scatteredY,
+
+          heroX,
+          heroY,
+
+          idanX,
+          idanY,
+
+          size:
+            Math.random() < 0.88
+              ? Math.random() * 1 + 0.35
+              : Math.random() * 1.6 + 0.8,
+
+          opacity:
+            Math.random() * 0.5 + 0.25,
+
+          depth: Math.random(),
+
+          twinkleSpeed:
+            Math.random() * 0.8 + 0.2,
+
+          twinkleOffset:
+            Math.random() * Math.PI * 2,
+
+          driftX:
+            (Math.random() - 0.5) * 0.035,
+
+          driftY:
+            (Math.random() - 0.5) * 0.02,
+        });
+      }
+    };
+
+    const handleResize = () => {
+      resize();
+      createStars();
+    };
+
+    const handleScroll = () => {
+      targetScroll = window.scrollY;
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      targetMouseX =
+        event.clientX / width - 0.5;
+
+      targetMouseY =
+        event.clientY / height - 0.5;
+    };
+
+    /*
+      Deteksi section IDAN
+    */
+    const observeIdan = () => {
+      const marker =
+        document.getElementById("idan-marker");
+
+      if (!marker) return;
+
+      const observer =
+        new IntersectionObserver(
+          ([entry]) => {
+            idanVisible = entry.isIntersecting;
+          },
+          {
+            threshold: 0.35,
+          }
+        );
+
+      observer.observe(marker);
+
+      return observer;
+    };
+
+    const observer = observeIdan();
+
+    const render = (time: number) => {
+      const seconds = time * 0.001;
+
+      /*
+        Smooth scroll
+      */
+      smoothScroll +=
+        (targetScroll - smoothScroll) * 0.055;
+
+      /*
+        Smooth mouse
+      */
+      smoothMouseX +=
+        (targetMouseX - smoothMouseX) * 0.025;
+
+      smoothMouseY +=
+        (targetMouseY - smoothMouseY) * 0.025;
+
+      /*
+        Tentukan mode
+      */
+
+      if (idanVisible) {
+        targetFormation = 2;
+      } else if (
+        window.scrollY <
+        window.innerHeight * 0.65
+      ) {
+        targetFormation = 1;
+      } else {
+        targetFormation = 0;
+      }
+
+      /*
+        Smooth transition antar mode
+      */
+      currentFormation +=
+        (targetFormation - currentFormation) *
+        0.035;
+
+      ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+      );
+
+      /*
+        Background
+      */
+      ctx.fillStyle = "#03040a";
+
+      ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+      );
+
+      /*
+        Atmosphere
+      */
+      const centerGradient =
+        ctx.createRadialGradient(
+          width * 0.5,
+          height * 0.45,
+          0,
+          width * 0.5,
+          height * 0.45,
+          width * 0.65
+        );
+
+      centerGradient.addColorStop(
+        0,
+        "rgba(35, 70, 140, 0.055)"
+      );
+
+      centerGradient.addColorStop(
+        1,
+        "rgba(3, 4, 10, 0)"
+      );
+
+      ctx.fillStyle = centerGradient;
+
+      ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+      );
+
+      /*
+        Render stars
+      */
+      for (const star of stars) {
+        const twinkle =
+          Math.sin(
+            seconds *
+              star.twinkleSpeed +
+              star.twinkleOffset
+          ) *
+            0.5 +
+          0.5;
+
+        /*
+          Tentukan posisi target
+        */
+
+        let targetX = star.scatteredX;
+        let targetY = star.scatteredY;
+
+        if (
+          currentFormation > 0 &&
+          currentFormation < 1
+        ) {
+          targetX = lerp(
+            star.scatteredX,
+            star.heroX,
+            currentFormation
+          );
+
+          targetY = lerp(
+            star.scatteredY,
+            star.heroY,
+            currentFormation
+          );
+        }
+
+        /*
+          13 -> scattered
+        */
+        else if (
+          currentFormation >= 1 &&
+          currentFormation < 2
+        ) {
+          const progress =
+            currentFormation - 1;
+
+          targetX = lerp(
+            star.heroX,
+            star.idanX,
+            progress
+          );
+
+          targetY = lerp(
+            star.heroY,
+            star.idanY,
+            progress
+          );
+        }
+
+        /*
+          IDAN
+        */
+        else if (currentFormation >= 2) {
+          targetX = star.idanX;
+          targetY = star.idanY;
+        }
+
+        /*
+          Kalau sedang kembali dari IDAN
+        */
+        if (
+          targetFormation === 0 &&
+          currentFormation > 0
+        ) {
+          const reverseProgress =
+            currentFormation;
+
+          targetX = lerp(
+            star.scatteredX,
+            star.heroX,
+            reverseProgress
+          );
+
+          targetY = lerp(
+            star.scatteredY,
+            star.heroY,
+            reverseProgress
+          );
+        }
+
+        /*
+          Smooth movement
+        */
+        star.x = lerp(
+          star.x,
+          targetX,
+          0.075
+        );
+
+        star.y = lerp(
+          star.y,
+          targetY,
+          0.075
+        );
+
+        /*
+          Mouse parallax
+        */
+        const depth =
+          0.25 + star.depth * 0.75;
+
+        const mouseOffsetX =
+          smoothMouseX *
+          12 *
+          depth;
+
+        const mouseOffsetY =
+          smoothMouseY *
+          9 *
+          depth;
+
+        /*
+          Subtle movement
+        */
+        const driftX =
+          Math.sin(
+            seconds *
+              0.15 +
+              star.twinkleOffset
+          ) *
+          star.driftX *
+          100;
+
+        const driftY =
+          Math.cos(
+            seconds *
+              0.12 +
+              star.twinkleOffset
+          ) *
+          star.driftY *
+          100;
+
+        const x =
+          star.x +
+          mouseOffsetX +
+          driftX;
+
+        const y =
+          star.y +
+          mouseOffsetY +
+          driftY;
+
+        /*
+          Twinkle
+        */
+        const alpha =
+          star.opacity *
+          (0.72 + twinkle * 0.28);
+
+        const size =
+          star.size *
+          (0.75 + star.depth * 0.45);
+
+        /*
+          Glow untuk bintang besar
+        */
+        if (size > 1.15) {
+          ctx.shadowBlur = 8;
+
+          ctx.shadowColor =
+            `rgba(170, 205, 255, ${
+              alpha * 0.4
+            })`;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.beginPath();
+
+        ctx.fillStyle =
+          `rgba(225, 235, 255, ${alpha})`;
+
+        ctx.arc(
+          x,
+          y,
+          size,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fill();
+      }
+
+      ctx.shadowBlur = 0;
+
+      animationFrame =
+        requestAnimationFrame(render);
+    };
+
+    resize();
+    createStars();
+
+    window.addEventListener(
+      "resize",
+      handleResize
     );
 
-    observer.observe(el);
-    return () => observer.disconnect();
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      {
+        passive: true,
+      }
+    );
+
+    window.addEventListener(
+      "pointermove",
+      handlePointerMove,
+      {
+        passive: true,
+      }
+    );
+
+    animationFrame =
+      requestAnimationFrame(render);
+
+    return () => {
+      cancelAnimationFrame(
+        animationFrame
+      );
+
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+
+      window.removeEventListener(
+        "scroll",
+        handleScroll
+      );
+
+      window.removeEventListener(
+        "pointermove",
+        handlePointerMove
+      );
+
+      observer?.disconnect();
+    };
   }, []);
 
-  const mode: "hero13" | "idan" | "scatter" =
-    canForm13 && heroFormed ? "hero13" : idanInView ? "idan" : "scatter";
-
-  // Seberapa "ngebut" scroll-nya, 0 (diam) sampai 1 (sangat cepat)
-  const speed = Math.min(Math.abs(scrollVelocity) / 45, 1);
-  const stretch = 1 + speed * 3.5;
-  const stretchOrigin = scrollVelocity >= 0 ? "top" : "bottom";
-
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-[#03040a]" />
-
-      <div className="absolute inset-0">
-        {stars.map((star) => {
-          let x = star.scatteredX;
-          let y = star.scatteredY;
-
-          if (mode === "hero13" && star.hero13X !== undefined) {
-            x = star.hero13X;
-            y = star.hero13Y!;
-          } else if (mode === "idan" && star.idanX !== undefined) {
-            x = star.idanX;
-            y = star.idanY!;
-          }
-
-          const parallaxOffset = -(scrollY * star.parallaxFactor);
-
-          return (
-            <span
-              key={star.id}
-              className="absolute rounded-full bg-white animate-twinkle"
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                opacity: Math.min(star.baseOpacity * (1 + speed * 0.4), 1),
-                boxShadow: `0 0 ${star.size * 5}px ${star.size * 1.5}px rgba(147,197,253,0.45)`,
-                transformOrigin: stretchOrigin,
-                transform: `translateY(${parallaxOffset}px) scaleY(${stretch})`,
-                transitionProperty: "left, top, transform, opacity",
-                transitionDuration: "1.8s, 1.8s, 0.15s, 0.15s",
-                transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
-                transitionDelay: `${(star.id % 25) * 0.015}s, ${(star.id % 25) * 0.015}s, 0s, 0s`,
-                animationDuration: `${star.duration}s`,
-                animationDelay: `${star.delay}s`,
-              }}
-            />
-          );
-        })}
-      </div>
-
-      <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/5 blur-[120px]" />
-      <div className="absolute left-[15%] top-[20%] h-[300px] w-[300px] rounded-full bg-purple-500/5 blur-[100px]" />
-
-      {/* VIGNETTE */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(0,0,0,0.5)_100%)]" />
-    </div>
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className="
+        pointer-events-none
+        fixed
+        inset-0
+        -z-10
+        h-full
+        w-full
+      "
+    />
   );
 }

@@ -76,7 +76,7 @@ export default function Hero() {
           opacity: nameOpacity,
           filter: nameBlur,
         }}
-        className="absolute left-6 top-[22%] max-w-[55vw] text-left md:left-16 md:top-[18%] md:max-w-[38vw] lg:left-24"
+        className="absolute left-6 top-[34%] max-w-[55vw] text-left md:left-16 md:top-[18%] md:max-w-[38vw] lg:left-24"
       >
         <h1
           className="
