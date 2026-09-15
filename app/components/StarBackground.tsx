@@ -83,9 +83,9 @@ export default function StarBackground() {
       void main() {
         vec2 p = gl_PointCoord - 0.5;
         float d = length(p);
-        float core = smoothstep(0.5, 0.0, d);
-        float glow = smoothstep(0.5, 0.05, d);
-        float alpha = (core * 0.9 + glow * 0.18) * vAlpha;
+        float core = smoothstep(0.24, 0.0, d);
+        float halo = smoothstep(0.5, 0.28, d) * 0.06;
+        float alpha = (core * 0.96 + halo) * vAlpha;
         if (alpha < 0.01) discard;
         gl_FragColor = vec4(vColor, alpha);
       }
@@ -198,6 +198,7 @@ export default function StarBackground() {
             ? [0.62, 0.78, 1.0]
             : [0.92 + Math.random() * 0.08, 0.94 + Math.random() * 0.06, 1.0];
 
+        const largeStar = Math.random() < 0.065;
         particles.push({
           x,
           y,
@@ -206,8 +207,12 @@ export default function StarBackground() {
           arm,
           phase: Math.random() * Math.PI * 2,
           speed: ORBIT_SPEED * (0.35 + radius * 0.9) * (0.7 + Math.random() * 0.6),
-          size: Math.random() < 0.065 ? 2.4 + Math.random() * 2.2 : 0.7 + Math.random() * 1.25,
-          brightness: 0.45 + Math.random() * 0.55,
+          size: largeStar
+            ? 1.35 + Math.random() * 1.05 + (1 - radius) * 0.18
+            : 0.42 + Math.random() * 0.82 + (1 - radius) * 0.08,
+          brightness: largeStar
+            ? 0.62 + Math.random() * 0.3
+            : 0.38 + Math.random() * 0.48,
           twinkle: 0.4 + Math.random() * 1.5,
           twinkleOffset: Math.random() * Math.PI * 2,
           color,
@@ -283,7 +288,6 @@ export default function StarBackground() {
         const gy = p.x * s + p.y * c;
         const depth = p.z + Math.sin(seconds * 0.12 + p.phase) * 0.025;
 
-        // Camera looks slightly down onto a thin 3D galactic disk.
         const tilt = 0.23;
         const projectedY = gy * Math.cos(tilt) - depth * 95 * Math.sin(tilt);
         const projectedZ = gy * Math.sin(tilt) + depth * 95 * Math.cos(tilt);
@@ -305,7 +309,7 @@ export default function StarBackground() {
           ? 1
           : 0.72 + Math.sin(seconds * p.twinkle + p.twinkleOffset) * 0.28;
         const depthBrightness = Math.max(0.65, 1 - Math.abs(projectedZ) / 900);
-        sizes[i] = p.size * (0.8 + depthBrightness * 0.7) * (mobile ? 0.72 : 1);
+        sizes[i] = p.size * (0.82 + depthBrightness * 0.5) * (mobile ? 0.7 : 1);
         alphas[i] = Math.min(1, p.brightness * twinkle * depthBrightness);
         colors[i * 3] = p.color[0];
         colors[i * 3 + 1] = p.color[1];
@@ -332,7 +336,7 @@ export default function StarBackground() {
       gl.enableVertexAttribArray(colorLocation);
       gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
 
-      gl.uniform1f(pointScaleLocation, Math.min(width, height) * 0.012 * dpr);
+      gl.uniform1f(pointScaleLocation, Math.min(width, height) * 0.007 * dpr);
       gl.uniform2f(resolutionLocation, width, height);
       gl.drawArrays(gl.POINTS, 0, particles.length);
 
