@@ -12,38 +12,38 @@ export default function Preloader() {
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
-    const start = Date.now();
-    const duration = 1800;
-
-    const tick = () => {
-      const progress = Math.min((Date.now() - start) / duration, 1);
+    const start = performance.now();
+    const duration = 1500;
+    const timer = window.setInterval(() => {
+      const progress = Math.min((performance.now() - start) / duration, 1);
       setCount(Math.floor(progress * 100));
+    }, 50);
 
-      if (progress < 1) {
-        requestAnimationFrame(tick);
-      } else {
-        setTimeout(() => {
-          setLoading(false);
-          document.body.style.overflow = "auto";
-        }, 300);
-      }
+    const finishTimer = window.setTimeout(() => {
+      setCount(100);
+      setLoading(false);
+      document.body.style.overflow = "";
+    }, duration + 250);
+
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(finishTimer);
+      document.body.style.overflow = "";
     };
-
-    requestAnimationFrame(tick);
   }, []);
 
   return (
     <AnimatePresence onExitComplete={() => setLoaded(true)}>
       {loading && (
         <motion.div
-          exit={{ opacity: 0, filter: "blur(10px)" }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          exit={{ opacity: 0, filter: "blur(8px)" }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#03040a]"
         >
           <motion.span
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
             className="mb-6 text-xs uppercase tracking-[0.4em] text-white/40"
           >
             Portfolio
@@ -53,9 +53,13 @@ export default function Preloader() {
             {count}%
           </span>
 
-          <motion.div className="mt-8 h-px w-32 overflow-hidden bg-white/10">
-            <motion.div className="h-full bg-white/60" style={{ width: `${count}%` }} />
-          </motion.div>
+          <div className="mt-8 h-px w-32 overflow-hidden bg-white/10">
+            <motion.div
+              className="h-full bg-white/60"
+              animate={{ width: `${count}%` }}
+              transition={{ duration: 0.08, ease: "linear" }}
+            />
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
