@@ -9,6 +9,9 @@ interface Particle {
   radius: number;
   arm: number;
   phase: number;
+  orbitPhase: number;
+  orbitEccentricity: number;
+  orbitWobble: number;
   speed: number;
   size: number;
   brightness: number;
@@ -206,6 +209,9 @@ export default function StarBackground() {
           radius,
           arm,
           phase: Math.random() * Math.PI * 2,
+          orbitPhase: Math.random() * Math.PI * 2,
+          orbitEccentricity: 0.92 + Math.random() * 0.16,
+          orbitWobble: 0.015 + Math.random() * 0.035,
           speed: ORBIT_SPEED * (0.35 + radius * 0.9) * (0.7 + Math.random() * 0.6),
           size: largeStar
             ? 1.35 + Math.random() * 1.05 + (1 - radius) * 0.18
@@ -281,11 +287,18 @@ export default function StarBackground() {
         const scatteredX = lerp(p.burstX, p.scatteredX, burstEase);
         const scatteredY = lerp(p.burstY, p.scatteredY, burstEase);
 
+        const baseAngle = Math.atan2(p.y, p.x);
         const orbit = reducedMotion ? 0 : seconds * p.speed;
-        const c = Math.cos(orbit);
-        const s = Math.sin(orbit);
-        const gx = p.x * c - p.y * s;
-        const gy = p.x * s + p.y * c;
+        const orbitalAngle = baseAngle + orbit;
+        const radialDistance = Math.hypot(p.x, p.y);
+        const wobble = reducedMotion
+          ? 1
+          : 1 + Math.sin(seconds * p.speed * 1.8 + p.orbitPhase) * p.orbitWobble;
+        const orbitalRadius = radialDistance * wobble;
+        const c = Math.cos(orbitalAngle);
+        const s = Math.sin(orbitalAngle);
+        const gx = c * orbitalRadius;
+        const gy = s * orbitalRadius * p.orbitEccentricity;
         const depth = p.z + Math.sin(seconds * 0.12 + p.phase) * 0.025;
 
         const tilt = 0.23;
