@@ -52,8 +52,8 @@ export default function Journey() {
   const glowY = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
 
   return (
-    <section ref={ref} className="relative overflow-hidden px-6 py-32">
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.018] blur-[130px]" />
+    <section ref={ref} className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 md:py-32">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.018] blur-[100px] md:h-[620px] md:w-[620px] md:blur-[130px]" />
 
       <div className="relative mx-auto w-full max-w-6xl">
         <motion.div
@@ -61,20 +61,22 @@ export default function Journey() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.8 }}
-          className="mb-16 flex flex-col gap-5 md:flex-row md:items-end md:justify-between"
+          className="mb-10 flex flex-col gap-4 sm:mb-12 md:mb-16 md:flex-row md:items-end md:justify-between"
         >
           <div>
-            <span className="text-xs uppercase tracking-[0.35em] text-white/40">04 — Journey</span>
-            <h2 className="mt-5 max-w-3xl text-4xl font-medium tracking-[-0.05em] text-white md:text-6xl">
+            <span className="text-[10px] uppercase tracking-[0.3em] text-white/40 sm:text-xs sm:tracking-[0.35em]">
+              04 — Journey
+            </span>
+            <h2 className="mt-4 max-w-3xl text-3xl font-medium tracking-[-0.05em] text-white sm:text-4xl md:mt-5 md:text-6xl">
               A path that keeps moving.
             </h2>
           </div>
-          <p className="max-w-sm text-sm leading-6 text-white/35">
+          <p className="max-w-sm text-xs leading-5 text-white/35 sm:text-sm sm:leading-6">
             Tidak selalu lurus. Setiap project menjadi satu titik yang membawa saya ke hal berikutnya.
           </p>
         </motion.div>
 
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.015] px-5 py-10 backdrop-blur-2xl md:px-12 md:py-14">
+        <div className="relative overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-white/[0.015] px-4 py-8 backdrop-blur-2xl sm:rounded-[2rem] sm:px-6 sm:py-10 md:px-12 md:py-14">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.045),transparent_25%),radial-gradient(circle_at_80%_75%,rgba(148,163,184,0.035),transparent_28%)]" />
 
           <div className="relative">
@@ -88,7 +90,7 @@ export default function Journey() {
               className="absolute left-[15px] z-10 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-white shadow-[0_0_18px_rgba(255,255,255,0.9)] md:left-1/2"
             />
 
-            <div className="space-y-16 md:space-y-24">
+            <div className="space-y-12 sm:space-y-16 md:space-y-24">
               {milestones.map((item, i) => {
                 const left = i % 2 === 0;
 
@@ -99,16 +101,34 @@ export default function Journey() {
                     whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                     viewport={{ once: true, amount: 0.25 }}
                     transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    className="relative grid grid-cols-[30px_1fr] gap-5 md:grid-cols-2 md:gap-16"
+                    className="relative grid grid-cols-[30px_minmax(0,1fr)] gap-4 md:grid-cols-2 md:gap-16"
                   >
                     <div className="hidden md:block" />
-                    <div className={`${left ? "md:col-start-1 md:row-start-1 md:text-right" : "md:col-start-2 md:row-start-1"} pl-0`}>
-                      <span className="font-mono text-[9px] tracking-[0.25em] text-white/25">{item.step}</span>
-                      <h3 className="mt-3 text-2xl font-medium tracking-[-0.035em] text-white md:text-3xl">{item.title}</h3>
-                      <p className={`mt-4 max-w-md text-sm leading-7 text-white/40 md:text-base ${left ? "md:ml-auto" : ""}`}>
+                    <div
+                      className={`${
+                        left
+                          ? "md:col-start-1 md:row-start-1 md:text-right"
+                          : "md:col-start-2 md:row-start-1"
+                      } col-start-2 row-start-1 min-w-0 pl-0`}
+                    >
+                      <span className="font-mono text-[8px] tracking-[0.25em] text-white/25 sm:text-[9px]">
+                        {item.step}
+                      </span>
+                      <h3 className="mt-2 text-xl font-medium leading-tight tracking-[-0.035em] text-white sm:mt-3 sm:text-2xl md:text-3xl">
+                        {item.title}
+                      </h3>
+                      <p
+                        className={`mt-3 max-w-md text-xs leading-6 text-white/40 sm:mt-4 sm:text-sm sm:leading-7 md:text-base ${
+                          left ? "md:ml-auto" : ""
+                        }`}
+                      >
                         {item.description}
                       </p>
-                      <span className={`mt-5 inline-flex rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-1.5 font-mono text-[8px] tracking-[0.18em] text-white/25 ${left ? "md:mr-0" : ""}`}>
+                      <span
+                        className={`mt-4 inline-flex max-w-full rounded-full border border-white/[0.08] bg-white/[0.025] px-2.5 py-1.5 font-mono text-[7px] tracking-[0.15em] text-white/25 sm:mt-5 sm:px-3 sm:text-[8px] sm:tracking-[0.18em] ${
+                          left ? "md:mr-0" : ""
+                        }`}
+                      >
                         {item.tag}
                       </span>
                     </div>
@@ -128,9 +148,13 @@ export default function Journey() {
             </div>
           </div>
 
-          <div className="relative mt-16 flex items-center justify-between border-t border-white/[0.07] pt-5 md:mt-20">
-            <span className="font-mono text-[8px] tracking-[0.2em] text-white/20">START — KEEP MOVING</span>
-            <span className="font-mono text-[8px] tracking-[0.2em] text-white/20">CURRENT POSITION — 05</span>
+          <div className="relative mt-12 flex flex-col gap-2 border-t border-white/[0.07] pt-5 sm:mt-16 sm:flex-row sm:items-center sm:justify-between md:mt-20">
+            <span className="font-mono text-[7px] tracking-[0.18em] text-white/20 sm:text-[8px] sm:tracking-[0.2em]">
+              START — KEEP MOVING
+            </span>
+            <span className="font-mono text-[7px] tracking-[0.18em] text-white/20 sm:text-[8px] sm:tracking-[0.2em]">
+              CURRENT POSITION — 05
+            </span>
           </div>
         </div>
       </div>
