@@ -87,9 +87,6 @@ export default function StarBackground() {
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
         const burstRadius = Math.pow(Math.random(), 0.7) * Math.min(width, height) * (mobile ? 0.045 : 0.065);
-
-        // Bias the distribution toward the core while keeping enough stars
-        // in the outer arms to make the spiral silhouette easy to read.
         const radius = Math.pow(Math.random(), 1.35);
         const arm = Math.floor(Math.random() * 4);
         const armSpread = 0.08 + radius * 0.38;
@@ -180,13 +177,15 @@ export default function StarBackground() {
       }
 
       if (burstStarted && burstProgress < 1) {
-        burstProgress = reducedMotion ? 1 : Math.min(1, burstProgress + (mobile ? 0.022 : 0.018));
+        // Speed up the initial burst without making it feel abrupt.
+        burstProgress = reducedMotion ? 1 : Math.min(1, burstProgress + (mobile ? 0.032 : 0.027));
       }
 
       const galaxyTarget = galaxyVisible && burstProgress >= 1 ? 1 : 0;
+      // Faster formation: the galaxy settles in sooner while remaining smooth.
       galaxyProgress = reducedMotion
         ? galaxyTarget
-        : lerp(galaxyProgress, galaxyTarget, mobile ? 0.055 : 0.035);
+        : lerp(galaxyProgress, galaxyTarget, mobile ? 0.09 : 0.065);
 
       if (!reducedMotion) {
         smoothMouseX = lerp(smoothMouseX, targetMouseX, 0.04);
@@ -208,18 +207,20 @@ export default function StarBackground() {
         const scatteredX = lerp(star.burstX, star.scatteredX, easedBurst);
         const scatteredY = lerp(star.burstY, star.scatteredY, easedBurst);
 
-        // Keep the exact galaxy coordinates and rotate the whole system
-        // around one center axis, preserving the spiral silhouette.
+        // Each star travels along its own original orbital path around the
+        // center. The galaxy silhouette is preserved, but the stars move
+        // through the arms instead of making the whole galaxy spin like one
+        // rigid image.
         const offsetX = star.galaxyX - width / 2;
         const offsetY = star.galaxyY - height / 2;
-        const rotation = reducedMotion ? 0 : seconds * GALAXY_ROTATION_SPEED * easedGalaxy;
+        const rotation = reducedMotion ? 0 : seconds * GALAXY_ROTATION_SPEED * (0.35 + star.galaxyRadius * 0.65) * easedGalaxy;
         const cos = Math.cos(rotation);
         const sin = Math.sin(rotation);
-        const rotatedGalaxyX = width / 2 + offsetX * cos - offsetY * sin;
-        const rotatedGalaxyY = height / 2 + offsetX * sin + offsetY * cos;
+        const orbitalGalaxyX = width / 2 + offsetX * cos - offsetY * sin;
+        const orbitalGalaxyY = height / 2 + offsetX * sin + offsetY * cos;
 
-        let x = lerp(scatteredX, rotatedGalaxyX, easedGalaxy);
-        let y = lerp(scatteredY, rotatedGalaxyY, easedGalaxy);
+        let x = lerp(scatteredX, orbitalGalaxyX, easedGalaxy);
+        let y = lerp(scatteredY, orbitalGalaxyY, easedGalaxy);
 
         if (!reducedMotion) {
           const drift = Math.sin(seconds * star.twinkleSpeed + star.twinkleOffset) * 0.35;
