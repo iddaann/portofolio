@@ -16,17 +16,23 @@ export default function ShootingStars() {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let spawnTimeout: ReturnType<typeof setTimeout> | undefined;
+    const cleanupTimeouts = new Set<ReturnType<typeof setTimeout>>();
     const mobile = window.innerWidth < 768;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const intervalMin = mobile ? 10000 : 6000;
-    const intervalRange = mobile ? 9000 : 9000;
+    const intervalRange = 9000;
 
     if (reducedMotion) return;
 
+    const scheduleSpawn = (delay: number) => {
+      spawnTimeout = setTimeout(spawn, delay);
+    };
+
     const spawn = () => {
-      if (!mounted || document.hidden) {
-        if (mounted) timeoutId = setTimeout(spawn, intervalMin);
+      if (!mounted) return;
+      if (document.hidden) {
+        scheduleSpawn(intervalMin);
         return;
       }
 
@@ -41,35 +47,33 @@ export default function ShootingStars() {
 
       setComets((prev) => [...prev.slice(-1), comet]);
 
-      setTimeout(() => {
-        if (mounted) {
-          setComets((prev) => prev.filter((item) => item.id !== id));
-        }
+      const removeTimeout = setTimeout(() => {
+        cleanupTimeouts.delete(removeTimeout);
+        if (mounted) setComets((prev) => prev.filter((item) => item.id !== id));
       }, comet.duration * 1000 + 200);
+      cleanupTimeouts.add(removeTimeout);
 
-      timeoutId = setTimeout(spawn, Math.random() * intervalRange + intervalMin);
+      scheduleSpawn(Math.random() * intervalRange + intervalMin);
     };
 
-    timeoutId = setTimeout(spawn, mobile ? 6500 : 4000);
+    scheduleSpawn(mobile ? 6500 : 4000);
 
     return () => {
       mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
+      if (spawnTimeout) clearTimeout(spawnTimeout);
+      cleanupTimeouts.forEach((timeout) => clearTimeout(timeout));
+      cleanupTimeouts.clear();
     };
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-[9] overflow-hidden">
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-[9] overflow-hidden">
       <AnimatePresence>
         {comets.map((comet) => (
           <motion.span
             key={comet.id}
             initial={{ opacity: 0, x: 0, y: 0 }}
-            animate={{
-              opacity: [0, 1, 0],
-              x: -comet.length * 1.3,
-              y: comet.length * 1.3,
-            }}
+            animate={{ opacity: [0, 1, 0], x: -comet.length * 1.3, y: comet.length * 1.3 }}
             exit={{ opacity: 0 }}
             transition={{ duration: comet.duration, ease: "easeOut" }}
             style={{
