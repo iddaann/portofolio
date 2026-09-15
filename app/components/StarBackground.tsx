@@ -12,12 +12,16 @@ interface Star {
   heroX: number;
   heroY: number;
 
-  idanX: number;
-  idanY: number;
+  galaxyX: number;
+  galaxyY: number;
+
+  galaxyAngle: number;
+  galaxyRadius: number;
 
   size: number;
   opacity: number;
   depth: number;
+  bright: boolean;
 
   twinkleSpeed: number;
   twinkleOffset: number;
@@ -26,8 +30,8 @@ interface Star {
   driftY: number;
 }
 
-const STAR_COUNT = 420;
-const FORMATION_COUNT = 300;
+const STAR_COUNT = 500;
+const HERO_STAR_COUNT = 300;
 
 const HERO_BOX = {
   left: 30,
@@ -36,12 +40,13 @@ const HERO_BOX = {
   height: 40,
 };
 
-const IDAN_BOX = {
-  left: 8,
-  top: 30,
-  width: 84,
-  height: 40,
-};
+function lerp(
+  a: number,
+  b: number,
+  amount: number
+) {
+  return a + (b - a) * amount;
+}
 
 function sampleTextPoints(
   text: string,
@@ -50,7 +55,8 @@ function sampleTextPoints(
   fontSize: number,
   count: number
 ) {
-  const canvas = document.createElement("canvas");
+  const canvas =
+    document.createElement("canvas");
 
   canvas.width = width;
   canvas.height = height;
@@ -59,21 +65,53 @@ function sampleTextPoints(
 
   if (!ctx) return [];
 
-  ctx.clearRect(0, 0, width, height);
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
 
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = "#ffffff";
+
   ctx.font = `900 ${fontSize}px Arial`;
+
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  ctx.fillText(text, width / 2, height / 2);
+  ctx.fillText(
+    text,
+    width / 2,
+    height / 2
+  );
 
-  const image = ctx.getImageData(0, 0, width, height);
-  const points: { x: number; y: number }[] = [];
+  const imageData =
+    ctx.getImageData(
+      0,
+      0,
+      width,
+      height
+    );
 
-  for (let y = 0; y < height; y += 3) {
-    for (let x = 0; x < width; x += 3) {
-      const alpha = image.data[(y * width + x) * 4 + 3];
+  const points: {
+    x: number;
+    y: number;
+  }[] = [];
+
+  for (
+    let y = 0;
+    y < height;
+    y += 3
+  ) {
+    for (
+      let x = 0;
+      x < width;
+      x += 3
+    ) {
+      const alpha =
+        imageData.data[
+          (y * width + x) * 4 + 3
+        ];
 
       if (alpha > 120) {
         points.push({
@@ -84,29 +122,44 @@ function sampleTextPoints(
     }
   }
 
-  // Acak supaya distribusi bintang lebih natural
-  for (let i = points.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+  /*
+    Randomize titik supaya bintang
+    tidak terlihat terlalu teratur.
+  */
 
-    [points[i], points[j]] = [points[j], points[i]];
+  for (
+    let i = points.length - 1;
+    i > 0;
+    i--
+  ) {
+    const j = Math.floor(
+      Math.random() * (i + 1)
+    );
+
+    [points[i], points[j]] = [
+      points[j],
+      points[i],
+    ];
   }
 
-  return points.slice(0, count);
-}
-
-function lerp(a: number, b: number, amount: number) {
-  return a + (b - a) * amount;
+  return points.slice(
+    0,
+    count
+  );
 }
 
 export default function StarBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef =
+    useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas =
+      canvasRef.current;
 
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx =
+      canvas.getContext("2d");
 
     if (!ctx) return;
 
@@ -116,8 +169,19 @@ export default function StarBackground() {
 
     let animationFrame = 0;
 
-    let targetScroll = window.scrollY;
-    let smoothScroll = window.scrollY;
+    /*
+      Scroll
+    */
+
+    let targetScroll =
+      window.scrollY;
+
+    let smoothScroll =
+      window.scrollY;
+
+    /*
+      Mouse
+    */
 
     let targetMouseX = 0;
     let targetMouseY = 0;
@@ -125,33 +189,66 @@ export default function StarBackground() {
     let smoothMouseX = 0;
     let smoothMouseY = 0;
 
-    let targetFormation = 0;
-    let currentFormation = 0;
-
     /*
+      Formation
+
       0 = scattered
       1 = 13
-      2 = IDAN
+      2 = galaxy
     */
+
+    let currentFormation = 1;
+    let targetFormation = 1;
 
     const stars: Star[] = [];
 
-    let idanVisible = false;
+    let galaxyVisible = false;
+
+    /*
+      ==========================
+      RESIZE
+      ==========================
+    */
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(
+        window.devicePixelRatio || 1,
+        2
+      );
 
-      width = window.innerWidth;
-      height = window.innerHeight;
+      width =
+        window.innerWidth;
 
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
+      height =
+        window.innerHeight;
 
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      canvas.width =
+        width * dpr;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas.height =
+        height * dpr;
+
+      canvas.style.width =
+        `${width}px`;
+
+      canvas.style.height =
+        `${height}px`;
+
+      ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+      );
     };
+
+    /*
+      ==========================
+      CREATE STARS
+      ==========================
+    */
 
     const createStars = () => {
       stars.length = 0;
@@ -163,51 +260,199 @@ export default function StarBackground() {
               500,
               300,
               210,
-              FORMATION_COUNT
+              HERO_STAR_COUNT
             )
           : [];
 
-      const idanPoints = sampleTextPoints(
-        "IDAN",
-        1000,
-        300,
-        230,
-        FORMATION_COUNT
-      );
+      for (
+        let i = 0;
+        i < STAR_COUNT;
+        i++
+      ) {
+        /*
+          Random scattered position
+        */
 
-      for (let i = 0; i < STAR_COUNT; i++) {
-        const scatteredX = Math.random() * width;
-        const scatteredY = Math.random() * height;
+        const scatteredX =
+          Math.random() * width;
+
+        const scatteredY =
+          Math.random() * height;
+
+        /*
+          ========================
+          HERO 13 POSITION
+          ========================
+        */
 
         const heroPoint =
-          heroPoints[i % Math.max(heroPoints.length, 1)];
-
-        const idanPoint =
-          idanPoints[i % Math.max(idanPoints.length, 1)];
+          heroPoints.length > 0
+            ? heroPoints[
+                i %
+                  heroPoints.length
+              ]
+            : null;
 
         const heroX = heroPoint
-          ? HERO_BOX.left / 100 * width +
-            heroPoint.x * (HERO_BOX.width / 100 * width)
+          ? (HERO_BOX.left / 100) *
+              width +
+            heroPoint.x *
+              ((HERO_BOX.width /
+                100) *
+                width)
           : scatteredX;
 
         const heroY = heroPoint
-          ? HERO_BOX.top / 100 * height +
-            heroPoint.y * (HERO_BOX.height / 100 * height)
+          ? (HERO_BOX.top / 100) *
+              height +
+            heroPoint.y *
+              ((HERO_BOX.height /
+                100) *
+                height)
           : scatteredY;
 
-        const idanX = idanPoint
-          ? IDAN_BOX.left / 100 * width +
-            idanPoint.x * (IDAN_BOX.width / 100 * width)
-          : scatteredX;
+        /*
+          ========================
+          GALAXY POSITION
+          ========================
+        */
 
-        const idanY = idanPoint
-          ? IDAN_BOX.top / 100 * height +
-            idanPoint.y * (IDAN_BOX.height / 100 * height)
-          : scatteredY;
+        /*
+          Radius menggunakan power
+          supaya pusat lebih padat.
+        */
+
+        const galaxyRadius =
+          Math.pow(
+            Math.random(),
+            0.72
+          );
+
+        /*
+          4 spiral arms.
+        */
+
+        const armCount = 4;
+
+        const arm =
+          Math.floor(
+            Math.random() *
+              armCount
+          );
+
+        /*
+          Jarak antar arm.
+        */
+
+        const armOffset =
+          (arm / armCount) *
+          Math.PI *
+          2;
+
+        /*
+          Ini yang membuat bentuknya
+          benar-benar spiral.
+
+          Semakin jauh dari pusat,
+          sudut semakin bergeser.
+        */
+
+        const spiralTwist =
+          galaxyRadius * 5.2;
+
+        /*
+          Sedikit random supaya
+          tidak terlihat seperti
+          spiral matematika sempurna.
+        */
+
+        const spread =
+          (Math.random() - 0.5) *
+          (0.35 +
+            galaxyRadius * 0.8);
+
+        /*
+          FINAL ANGLE
+
+          Ini menggantikan finalAngle
+          yang menyebabkan error tadi.
+        */
+
+        const galaxyAngle =
+          armOffset +
+          spiralTwist +
+          spread;
+
+        /*
+          Ukuran galaxy
+        */
+
+        const galaxyWidth =
+          Math.min(
+            width * 0.82,
+            1100
+          );
+
+        const galaxyHeight =
+          Math.min(
+            height * 0.58,
+            650
+          );
+
+        /*
+          Sedikit vertical noise.
+        */
+
+        const verticalNoise =
+          (Math.random() - 0.5) *
+          20 *
+          galaxyRadius;
+
+        /*
+          Posisi final galaxy.
+        */
+
+        const galaxyX =
+          width / 2 +
+          Math.cos(
+            galaxyAngle
+          ) *
+            galaxyRadius *
+            galaxyWidth *
+            0.5;
+
+        const galaxyY =
+          height / 2 +
+          Math.sin(
+            galaxyAngle
+          ) *
+            galaxyRadius *
+            galaxyHeight *
+            0.5 +
+          verticalNoise;
+
+        /*
+          ========================
+          STAR PROPERTIES
+          ========================
+        */
+
+        const bright =
+          Math.random() < 0.035;
+
+        const size =
+          galaxyRadius < 0.2
+            ? Math.random() * 1.5 +
+              0.45
+            : Math.random() < 0.9
+              ? Math.random() * 0.9 +
+                0.3
+              : Math.random() * 1.5 +
+                0.7;
 
         stars.push({
-          x: scatteredX,
-          y: scatteredY,
+          x: heroX,
+          y: heroY,
 
           scatteredX,
           scatteredY,
@@ -215,33 +460,47 @@ export default function StarBackground() {
           heroX,
           heroY,
 
-          idanX,
-          idanY,
+          galaxyX,
+          galaxyY,
 
-          size:
-            Math.random() < 0.88
-              ? Math.random() * 1 + 0.35
-              : Math.random() * 1.6 + 0.8,
+          galaxyAngle,
+          galaxyRadius,
 
+          size,
           opacity:
-            Math.random() * 0.5 + 0.25,
+            Math.random() * 0.5 +
+            0.25,
 
-          depth: Math.random(),
+          depth:
+            Math.random(),
+
+          bright,
 
           twinkleSpeed:
-            Math.random() * 0.8 + 0.2,
+            Math.random() * 0.8 +
+            0.2,
 
           twinkleOffset:
-            Math.random() * Math.PI * 2,
+            Math.random() *
+            Math.PI *
+            2,
 
           driftX:
-            (Math.random() - 0.5) * 0.035,
+            (Math.random() - 0.5) *
+            0.03,
 
           driftY:
-            (Math.random() - 0.5) * 0.02,
+            (Math.random() - 0.5) *
+            0.02,
         });
       }
     };
+
+    /*
+      ==========================
+      EVENTS
+      ==========================
+    */
 
     const handleResize = () => {
       resize();
@@ -249,66 +508,101 @@ export default function StarBackground() {
     };
 
     const handleScroll = () => {
-      targetScroll = window.scrollY;
+      targetScroll =
+        window.scrollY;
     };
 
-    const handlePointerMove = (event: PointerEvent) => {
+    const handlePointerMove = (
+      event: PointerEvent
+    ) => {
+      if (
+        width === 0 ||
+        height === 0
+      ) {
+        return;
+      }
+
       targetMouseX =
-        event.clientX / width - 0.5;
+        event.clientX / width -
+        0.5;
 
       targetMouseY =
-        event.clientY / height - 0.5;
+        event.clientY / height -
+        0.5;
     };
 
     /*
-      Deteksi section IDAN
+      ==========================
+      GALAXY MARKER
+      ==========================
     */
-    const observeIdan = () => {
-      const marker =
-        document.getElementById("idan-marker");
 
-      if (!marker) return;
+    const marker =
+      document.getElementById(
+        "idan-marker"
+      );
 
-      const observer =
+    let observer:
+      | IntersectionObserver
+      | undefined;
+
+    if (marker) {
+      observer =
         new IntersectionObserver(
           ([entry]) => {
-            idanVisible = entry.isIntersecting;
+            galaxyVisible =
+              entry.isIntersecting;
           },
           {
-            threshold: 0.35,
+            threshold: 0.25,
           }
         );
 
       observer.observe(marker);
+    }
 
-      return observer;
-    };
+    /*
+      ==========================
+      RENDER
+      ==========================
+    */
 
-    const observer = observeIdan();
-
-    const render = (time: number) => {
-      const seconds = time * 0.001;
+    const render = (
+      time: number
+    ) => {
+      const seconds =
+        time * 0.001;
 
       /*
         Smooth scroll
       */
+
       smoothScroll +=
-        (targetScroll - smoothScroll) * 0.055;
+        (targetScroll -
+          smoothScroll) *
+        0.055;
 
       /*
         Smooth mouse
       */
+
       smoothMouseX +=
-        (targetMouseX - smoothMouseX) * 0.025;
+        (targetMouseX -
+          smoothMouseX) *
+        0.025;
 
       smoothMouseY +=
-        (targetMouseY - smoothMouseY) * 0.025;
+        (targetMouseY -
+          smoothMouseY) *
+        0.025;
 
       /*
-        Tentukan mode
+        ========================
+        DETERMINE FORMATION
+        ========================
       */
 
-      if (idanVisible) {
+      if (galaxyVisible) {
         targetFormation = 2;
       } else if (
         window.scrollY <
@@ -320,11 +614,19 @@ export default function StarBackground() {
       }
 
       /*
-        Smooth transition antar mode
+        Smooth transition.
       */
+
       currentFormation +=
-        (targetFormation - currentFormation) *
+        (targetFormation -
+          currentFormation) *
         0.035;
+
+      /*
+        ========================
+        BACKGROUND
+        ========================
+      */
 
       ctx.clearRect(
         0,
@@ -333,10 +635,8 @@ export default function StarBackground() {
         height
       );
 
-      /*
-        Background
-      */
-      ctx.fillStyle = "#03040a";
+      ctx.fillStyle =
+        "#03040a";
 
       ctx.fillRect(
         0,
@@ -346,29 +646,38 @@ export default function StarBackground() {
       );
 
       /*
-        Atmosphere
+        ========================
+        SPACE ATMOSPHERE
+        ========================
       */
-      const centerGradient =
+
+      const atmosphere =
         ctx.createRadialGradient(
-          width * 0.5,
-          height * 0.45,
+          width / 2,
+          height / 2,
           0,
-          width * 0.5,
-          height * 0.45,
-          width * 0.65
+          width / 2,
+          height / 2,
+          width * 0.7
         );
 
-      centerGradient.addColorStop(
+      atmosphere.addColorStop(
         0,
-        "rgba(35, 70, 140, 0.055)"
+        "rgba(45,80,160,0.075)"
       );
 
-      centerGradient.addColorStop(
+      atmosphere.addColorStop(
+        0.45,
+        "rgba(30,50,120,0.03)"
+      );
+
+      atmosphere.addColorStop(
         1,
-        "rgba(3, 4, 10, 0)"
+        "rgba(3,4,10,0)"
       );
 
-      ctx.fillStyle = centerGradient;
+      ctx.fillStyle =
+        atmosphere;
 
       ctx.fillRect(
         0,
@@ -378,9 +687,151 @@ export default function StarBackground() {
       );
 
       /*
-        Render stars
+        ========================
+        GALACTIC CORE
+        ========================
       */
-      for (const star of stars) {
+
+      if (
+        currentFormation >
+        1.15
+      ) {
+        const strength =
+          Math.min(
+            (currentFormation -
+              1.15) /
+              0.85,
+            1
+          );
+
+        const core =
+          ctx.createRadialGradient(
+            width / 2,
+            height / 2,
+            0,
+            width / 2,
+            height / 2,
+            width * 0.24
+          );
+
+        core.addColorStop(
+          0,
+          `rgba(255,255,255,${
+            0.18 * strength
+          })`
+        );
+
+        core.addColorStop(
+          0.12,
+          `rgba(200,220,255,${
+            0.1 * strength
+          })`
+        );
+
+        core.addColorStop(
+          0.35,
+          `rgba(100,140,230,${
+            0.04 * strength
+          })`
+        );
+
+        core.addColorStop(
+          1,
+          "rgba(3,4,10,0)"
+        );
+
+        ctx.fillStyle =
+          core;
+
+        ctx.fillRect(
+          0,
+          0,
+          width,
+          height
+        );
+      }
+
+      /*
+        ========================
+        GALAXY DUST
+        ========================
+      */
+
+      if (
+        currentFormation >
+        1.25
+      ) {
+        const dustStrength =
+          Math.min(
+            (currentFormation -
+              1.25) /
+              0.75,
+            1
+          );
+
+        for (
+          let i = 0;
+          i < 140;
+          i++
+        ) {
+          const angle =
+            (i / 140) *
+              Math.PI *
+              2 +
+            seconds * 0.012;
+
+          const radius =
+            0.15 +
+            Math.random() *
+              0.8;
+
+          const dustX =
+            width / 2 +
+            Math.cos(angle) *
+              radius *
+              width *
+              0.38;
+
+          const dustY =
+            height / 2 +
+            Math.sin(angle) *
+              radius *
+              height *
+              0.25;
+
+          ctx.beginPath();
+
+          ctx.fillStyle =
+            `rgba(160,190,230,${
+              0.018 *
+              dustStrength
+            })`;
+
+          ctx.arc(
+            dustX,
+            dustY,
+            1,
+            0,
+            Math.PI * 2
+          );
+
+          ctx.fill();
+        }
+      }
+
+      /*
+        ========================
+        STARS
+        ========================
+      */
+
+      for (
+        const star of stars
+      ) {
+        /*
+          Twinkle
+        */
+
         const twinkle =
           Math.sin(
             seconds *
@@ -391,86 +842,85 @@ export default function StarBackground() {
           0.5;
 
         /*
-          Tentukan posisi target
+          ======================
+          TARGET POSITION
+          ======================
         */
 
-        let targetX = star.scatteredX;
-        let targetY = star.scatteredY;
+        let targetX =
+          star.scatteredX;
+
+        let targetY =
+          star.scatteredY;
+
+        /*
+          SCATTERED
+          ↕
+          13
+        */
 
         if (
-          currentFormation > 0 &&
-          currentFormation < 1
+          currentFormation <
+          1
         ) {
+          const progress =
+            currentFormation;
+
           targetX = lerp(
             star.scatteredX,
             star.heroX,
-            currentFormation
+            progress
           );
 
           targetY = lerp(
             star.scatteredY,
             star.heroY,
-            currentFormation
+            progress
           );
         }
 
         /*
-          13 -> scattered
+          13
+          ↕
+          GALAXY
         */
+
         else if (
-          currentFormation >= 1 &&
-          currentFormation < 2
+          currentFormation <
+          2
         ) {
           const progress =
             currentFormation - 1;
 
           targetX = lerp(
             star.heroX,
-            star.idanX,
+            star.galaxyX,
             progress
           );
 
           targetY = lerp(
             star.heroY,
-            star.idanY,
+            star.galaxyY,
             progress
           );
         }
 
         /*
-          IDAN
+          GALAXY
         */
-        else if (currentFormation >= 2) {
-          targetX = star.idanX;
-          targetY = star.idanY;
+
+        else {
+          targetX =
+            star.galaxyX;
+
+          targetY =
+            star.galaxyY;
         }
 
         /*
-          Kalau sedang kembali dari IDAN
+          Smooth position.
         */
-        if (
-          targetFormation === 0 &&
-          currentFormation > 0
-        ) {
-          const reverseProgress =
-            currentFormation;
 
-          targetX = lerp(
-            star.scatteredX,
-            star.heroX,
-            reverseProgress
-          );
-
-          targetY = lerp(
-            star.scatteredY,
-            star.heroY,
-            reverseProgress
-          );
-        }
-
-        /*
-          Smooth movement
-        */
         star.x = lerp(
           star.x,
           targetX,
@@ -484,28 +934,133 @@ export default function StarBackground() {
         );
 
         /*
-          Mouse parallax
+          ======================
+          GALAXY ORBIT
+          ======================
         */
+
+        let finalX =
+          star.x;
+
+        let finalY =
+          star.y;
+
+        if (
+          currentFormation >
+          1.35
+        ) {
+          const orbitProgress =
+            Math.min(
+              currentFormation -
+                1.35,
+              1
+            );
+
+          /*
+            Bintang dekat core
+            sedikit lebih cepat.
+          */
+
+          const orbitSpeed =
+            0.055 -
+            star.galaxyRadius *
+              0.025;
+
+          /*
+            Rotasi.
+          */
+
+          const rotation =
+            seconds *
+            orbitSpeed;
+
+          const centerX =
+            width / 2;
+
+          const centerY =
+            height / 2;
+
+          /*
+            Posisi relatif terhadap
+            pusat galaxy.
+          */
+
+          const dx =
+            star.galaxyX -
+            centerX;
+
+          const dy =
+            star.galaxyY -
+            centerY;
+
+          /*
+            Rotasi 2D.
+          */
+
+          const cos =
+            Math.cos(rotation);
+
+          const sin =
+            Math.sin(rotation);
+
+          const rotatedX =
+            dx * cos -
+            dy * sin;
+
+          const rotatedY =
+            dx * sin +
+            dy * cos;
+
+          const orbitX =
+            centerX +
+            rotatedX;
+
+          const orbitY =
+            centerY +
+            rotatedY;
+
+          finalX = lerp(
+            star.x,
+            orbitX,
+            orbitProgress
+          );
+
+          finalY = lerp(
+            star.y,
+            orbitY,
+            orbitProgress
+          );
+        }
+
+        /*
+          ======================
+          MOUSE PARALLAX
+          ======================
+        */
+
         const depth =
-          0.25 + star.depth * 0.75;
+          0.25 +
+          star.depth * 0.75;
 
         const mouseOffsetX =
           smoothMouseX *
-          12 *
+          14 *
           depth;
 
         const mouseOffsetY =
           smoothMouseY *
-          9 *
+          10 *
           depth;
 
         /*
-          Subtle movement
+          ======================
+          SUBTLE DRIFT
+          ======================
         */
+
         const driftX =
           Math.sin(
-            seconds *
-              0.15 +
+            seconds * 0.15 +
               star.twinkleOffset
           ) *
           star.driftX *
@@ -513,52 +1068,81 @@ export default function StarBackground() {
 
         const driftY =
           Math.cos(
-            seconds *
-              0.12 +
+            seconds * 0.12 +
               star.twinkleOffset
           ) *
           star.driftY *
           100;
 
         const x =
-          star.x +
+          finalX +
           mouseOffsetX +
           driftX;
 
         const y =
-          star.y +
+          finalY +
           mouseOffsetY +
           driftY;
 
         /*
-          Twinkle
+          ======================
+          SIZE
+          ======================
         */
-        const alpha =
-          star.opacity *
-          (0.72 + twinkle * 0.28);
 
         const size =
           star.size *
-          (0.75 + star.depth * 0.45);
+          (0.75 +
+            star.depth * 0.5) *
+          (star.bright
+            ? 1.8
+            : 1);
 
         /*
-          Glow untuk bintang besar
+          ======================
+          OPACITY
+          ======================
         */
-        if (size > 1.15) {
-          ctx.shadowBlur = 8;
+
+        const alpha =
+          Math.min(
+            star.opacity *
+              (0.68 +
+                twinkle * 0.32),
+            1
+          );
+
+        /*
+          ======================
+          GLOW
+          ======================
+        */
+
+        if (star.bright) {
+          ctx.shadowBlur = 15;
 
           ctx.shadowColor =
-            `rgba(170, 205, 255, ${
-              alpha * 0.4
+            `rgba(220,235,255,${
+              alpha * 0.9
             })`;
         } else {
-          ctx.shadowBlur = 0;
+          ctx.shadowBlur =
+            4 + size * 5;
+
+          ctx.shadowColor =
+            `rgba(180,215,255,${
+              alpha * 0.55
+            })`;
         }
+
+        /*
+          Draw star.
+        */
 
         ctx.beginPath();
 
         ctx.fillStyle =
-          `rgba(225, 235, 255, ${alpha})`;
+          `rgba(225,235,255,${alpha})`;
 
         ctx.arc(
           x,
@@ -569,15 +1153,54 @@ export default function StarBackground() {
         );
 
         ctx.fill();
+
+        /*
+          Bright star memiliki
+          titik inti yang lebih putih.
+        */
+
+        if (
+          star.bright &&
+          currentFormation >
+            1.1
+        ) {
+          ctx.shadowBlur = 0;
+
+          ctx.beginPath();
+
+          ctx.fillStyle =
+            `rgba(255,255,255,${
+              alpha * 0.9
+            })`;
+
+          ctx.arc(
+            x,
+            y,
+            size * 0.45,
+            0,
+            Math.PI * 2
+          );
+
+          ctx.fill();
+        }
       }
 
       ctx.shadowBlur = 0;
 
       animationFrame =
-        requestAnimationFrame(render);
+        requestAnimationFrame(
+          render
+        );
     };
 
+    /*
+      ==========================
+      INITIALIZE
+      ==========================
+    */
+
     resize();
+
     createStars();
 
     window.addEventListener(
@@ -602,7 +1225,15 @@ export default function StarBackground() {
     );
 
     animationFrame =
-      requestAnimationFrame(render);
+      requestAnimationFrame(
+        render
+      );
+
+    /*
+      ==========================
+      CLEANUP
+      ==========================
+    */
 
     return () => {
       cancelAnimationFrame(
