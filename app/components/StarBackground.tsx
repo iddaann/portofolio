@@ -26,8 +26,8 @@ interface Particle {
 
 const DESKTOP_COUNT = 2400;
 const MOBILE_COUNT = 700;
-const SCATTERED_DESKTOP_COUNT = 360;
-const SCATTERED_MOBILE_COUNT = 150;
+const SCATTERED_DESKTOP_COUNT = 120;
+const SCATTERED_MOBILE_COUNT = 60;
 const ARMS = 2;
 const SPIRAL_TURNS = 1.75;
 const BURST_SPEED = 0.032;
@@ -280,7 +280,7 @@ export default function StarBackground() {
       const galaxyEase = smoothstep(galaxyProgress);
       const baseCount = mobile ? SCATTERED_MOBILE_COUNT : SCATTERED_DESKTOP_COUNT;
       const fullCount = particles.length;
-      const revealEase = galaxyEase * galaxyEase * (3 - 2 * galaxyEase);
+      const revealEase = smoothstep(Math.min(1, Math.max(0, (galaxyEase - 0.12) / 0.88)));
       const activeCount = Math.min(
         fullCount,
         Math.max(baseCount, Math.floor(lerp(baseCount, fullCount, revealEase)))
