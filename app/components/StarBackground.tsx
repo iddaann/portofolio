@@ -9,7 +9,6 @@ interface Star {
   burstY: number;
   galaxyX: number;
   galaxyY: number;
-  galaxySpeed: number;
   size: number;
   opacity: number;
   depth: number;
@@ -21,6 +20,7 @@ interface Star {
 
 const DESKTOP_STAR_COUNT = 420;
 const MOBILE_STAR_COUNT = 190;
+const GALAXY_ROTATION_SPEED = 0.045;
 
 function lerp(a: number, b: number, amount: number) {
   return a + (b - a) * amount;
@@ -89,18 +89,14 @@ export default function StarBackground() {
         const radius = Math.pow(Math.random(), 1.15);
         const arm = Math.floor(Math.random() * 4);
         const galaxyAngle = (arm / 4) * Math.PI * 2 + radius * Math.PI * 2.8 + (Math.random() - 0.5) * (0.12 + radius * 0.8);
-        const galaxyX = width / 2 + Math.cos(galaxyAngle) * radius * galaxyWidth * 0.5;
-        const galaxyY = height / 2 + Math.sin(galaxyAngle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 20 * radius;
-        const galaxySpeed = lerp(0.18, 0.055, radius) * (0.88 + Math.random() * 0.24);
 
         stars.push({
           scatteredX: Math.random() * width,
           scatteredY: Math.random() * height,
           burstX: width / 2 + Math.cos(angle) * burstRadius,
           burstY: height / 2 + Math.sin(angle) * burstRadius,
-          galaxyX,
-          galaxyY,
-          galaxySpeed,
+          galaxyX: width / 2 + Math.cos(galaxyAngle) * radius * galaxyWidth * 0.5,
+          galaxyY: height / 2 + Math.sin(galaxyAngle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 20 * radius,
           size: Math.random() < 0.08 ? Math.random() * 1.6 + 1.1 : Math.random() * 0.8 + 0.4,
           opacity: Math.random() * 0.5 + 0.25,
           depth: Math.random(),
@@ -197,12 +193,12 @@ export default function StarBackground() {
         const scatteredX = lerp(star.burstX, star.scatteredX, easedBurst);
         const scatteredY = lerp(star.burstY, star.scatteredY, easedBurst);
 
-        // Keep the original galaxy coordinates intact, then rotate the entire
-        // offset vector around the center. This preserves the spiral arms and
-        // natural thickness instead of turning the galaxy into a simple ring.
+        // Keep the exact original galaxy coordinates. We only rotate the
+        // coordinate system around its center, so the spiral arms, density,
+        // and overall galaxy silhouette remain unchanged.
         const offsetX = star.galaxyX - width / 2;
         const offsetY = star.galaxyY - height / 2;
-        const rotation = reducedMotion ? 0 : seconds * star.galaxySpeed * easedGalaxy;
+        const rotation = reducedMotion ? 0 : seconds * GALAXY_ROTATION_SPEED * easedGalaxy;
         const cos = Math.cos(rotation);
         const sin = Math.sin(rotation);
         const rotatedGalaxyX = width / 2 + offsetX * cos - offsetY * sin;
