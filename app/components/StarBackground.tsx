@@ -23,6 +23,10 @@ interface Star {
   depth: number;
   bright: boolean;
 
+  glowSize: number;
+  glowOpacity: number;
+  starColor: string;
+
   twinkleSpeed: number;
   twinkleOffset: number;
 
@@ -40,6 +44,12 @@ const HERO_BOX = {
   height: 40,
 };
 
+/*
+  ============================
+  LERP
+  ============================
+*/
+
 function lerp(
   a: number,
   b: number,
@@ -47,6 +57,12 @@ function lerp(
 ) {
   return a + (b - a) * amount;
 }
+
+/*
+  ============================
+  SAMPLE TEXT
+  ============================
+*/
 
 function sampleTextPoints(
   text: string,
@@ -61,7 +77,8 @@ function sampleTextPoints(
   canvas.width = width;
   canvas.height = height;
 
-  const ctx = canvas.getContext("2d");
+  const ctx =
+    canvas.getContext("2d");
 
   if (!ctx) return [];
 
@@ -74,7 +91,8 @@ function sampleTextPoints(
 
   ctx.fillStyle = "#ffffff";
 
-  ctx.font = `900 ${fontSize}px Arial`;
+  ctx.font =
+    `900 ${fontSize}px Arial`;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -97,6 +115,11 @@ function sampleTextPoints(
     x: number;
     y: number;
   }[] = [];
+
+  /*
+    Ambil titik pixel
+    yang membentuk angka.
+  */
 
   for (
     let y = 0;
@@ -123,8 +146,8 @@ function sampleTextPoints(
   }
 
   /*
-    Randomize titik supaya bintang
-    tidak terlihat terlalu teratur.
+    Acak titik agar distribusi
+    bintang tidak terlalu kaku.
   */
 
   for (
@@ -132,9 +155,10 @@ function sampleTextPoints(
     i > 0;
     i--
   ) {
-    const j = Math.floor(
-      Math.random() * (i + 1)
-    );
+    const j =
+      Math.floor(
+        Math.random() * (i + 1)
+      );
 
     [points[i], points[j]] = [
       points[j],
@@ -147,6 +171,12 @@ function sampleTextPoints(
     count
   );
 }
+
+/*
+  ============================
+  STAR BACKGROUND
+  ============================
+*/
 
 export default function StarBackground() {
   const canvasRef =
@@ -170,7 +200,9 @@ export default function StarBackground() {
     let animationFrame = 0;
 
     /*
-      Scroll
+      ==========================
+      SCROLL
+      ==========================
     */
 
     let targetScroll =
@@ -180,7 +212,9 @@ export default function StarBackground() {
       window.scrollY;
 
     /*
-      Mouse
+      ==========================
+      MOUSE
+      ==========================
     */
 
     let targetMouseX = 0;
@@ -190,7 +224,9 @@ export default function StarBackground() {
     let smoothMouseY = 0;
 
     /*
-      Formation
+      ==========================
+      FORMATION
+      ==========================
 
       0 = scattered
       1 = 13
@@ -211,10 +247,11 @@ export default function StarBackground() {
     */
 
     const resize = () => {
-      dpr = Math.min(
-        window.devicePixelRatio || 1,
-        2
-      );
+      dpr =
+        Math.min(
+          window.devicePixelRatio || 1,
+          2
+        );
 
       width =
         window.innerWidth;
@@ -253,6 +290,12 @@ export default function StarBackground() {
     const createStars = () => {
       stars.length = 0;
 
+      /*
+        ========================
+        HERO 13
+        ========================
+      */
+
       const heroPoints =
         width >= 768
           ? sampleTextPoints(
@@ -264,13 +307,21 @@ export default function StarBackground() {
             )
           : [];
 
+      /*
+        ========================
+        CREATE EACH STAR
+        ========================
+      */
+
       for (
         let i = 0;
         i < STAR_COUNT;
         i++
       ) {
         /*
-          Random scattered position
+          ----------------------
+          SCATTERED POSITION
+          ----------------------
         */
 
         const scatteredX =
@@ -280,9 +331,9 @@ export default function StarBackground() {
           Math.random() * height;
 
         /*
-          ========================
+          ----------------------
           HERO 13 POSITION
-          ========================
+          ----------------------
         */
 
         const heroPoint =
@@ -293,43 +344,44 @@ export default function StarBackground() {
               ]
             : null;
 
-        const heroX = heroPoint
-          ? (HERO_BOX.left / 100) *
-              width +
-            heroPoint.x *
-              ((HERO_BOX.width /
-                100) *
-                width)
-          : scatteredX;
+        const heroX =
+          heroPoint
+            ? (HERO_BOX.left / 100) *
+                width +
+              heroPoint.x *
+                ((HERO_BOX.width / 100) *
+                  width)
+            : scatteredX;
 
-        const heroY = heroPoint
-          ? (HERO_BOX.top / 100) *
-              height +
-            heroPoint.y *
-              ((HERO_BOX.height /
-                100) *
-                height)
-          : scatteredY;
-
-        /*
-          ========================
-          GALAXY POSITION
-          ========================
-        */
+        const heroY =
+          heroPoint
+            ? (HERO_BOX.top / 100) *
+                height +
+              heroPoint.y *
+                ((HERO_BOX.height / 100) *
+                  height)
+            : scatteredY;
 
         /*
-          Radius menggunakan power
-          supaya pusat lebih padat.
+          ----------------------
+          GALAXY RADIUS
+          ----------------------
+
+          Radius lebih banyak
+          berkumpul di bagian
+          dalam galaxy.
         */
 
         const galaxyRadius =
           Math.pow(
             Math.random(),
-            0.72
+            1.15
           );
 
         /*
-          4 spiral arms.
+          ----------------------
+          SPIRAL ARMS
+          ----------------------
         */
 
         const armCount = 4;
@@ -340,42 +392,37 @@ export default function StarBackground() {
               armCount
           );
 
-        /*
-          Jarak antar arm.
-        */
-
         const armOffset =
           (arm / armCount) *
           Math.PI *
           2;
 
         /*
-          Ini yang membuat bentuknya
-          benar-benar spiral.
-
           Semakin jauh dari pusat,
-          sudut semakin bergeser.
+          semakin besar perubahan
+          sudut spiral.
         */
 
+        const spiralTurns =
+          Math.PI * 2.8;
+
         const spiralTwist =
-          galaxyRadius * 5.2;
+          galaxyRadius *
+          spiralTurns;
 
         /*
-          Sedikit random supaya
-          tidak terlihat seperti
-          spiral matematika sempurna.
+          Noise supaya spiral
+          tidak terlihat terlalu
+          sempurna.
         */
 
         const spread =
           (Math.random() - 0.5) *
-          (0.35 +
+          (0.12 +
             galaxyRadius * 0.8);
 
         /*
-          FINAL ANGLE
-
-          Ini menggantikan finalAngle
-          yang menyebabkan error tadi.
+          Sudut final.
         */
 
         const galaxyAngle =
@@ -384,19 +431,21 @@ export default function StarBackground() {
           spread;
 
         /*
-          Ukuran galaxy
+          ----------------------
+          GALAXY SIZE
+          ----------------------
         */
 
         const galaxyWidth =
           Math.min(
-            width * 0.82,
-            1100
+            width * 0.95,
+            1350
           );
 
         const galaxyHeight =
           Math.min(
-            height * 0.58,
-            650
+            height * 0.52,
+            620
           );
 
         /*
@@ -409,7 +458,9 @@ export default function StarBackground() {
           galaxyRadius;
 
         /*
-          Posisi final galaxy.
+          ----------------------
+          GALAXY POSITION
+          ----------------------
         */
 
         const galaxyX =
@@ -437,18 +488,60 @@ export default function StarBackground() {
           ========================
         */
 
+        /*
+          Sebagian kecil bintang
+          dibuat sangat terang.
+        */
+
         const bright =
-          Math.random() < 0.035;
+          Math.random() < 0.055;
+
+        /*
+          Ukuran bintang.
+
+          Mayoritas kecil,
+          sebagian medium,
+          sedikit besar.
+        */
 
         const size =
-          galaxyRadius < 0.2
-            ? Math.random() * 1.5 +
-              0.45
-            : Math.random() < 0.9
-              ? Math.random() * 0.9 +
-                0.3
-              : Math.random() * 1.5 +
-                0.7;
+          Math.random() < 0.08
+            ? Math.random() * 1.8 + 1.2
+            : Math.random() * 0.9 + 0.35;
+
+        /*
+          Glow setiap bintang.
+        */
+
+        const glowSize =
+          Math.random() * 5 + 3;
+
+        const glowOpacity =
+          Math.random() * 0.35 + 0.2;
+
+        /*
+          Warna cahaya.
+        */
+
+        const starColors = [
+          "225,235,255",
+          "255,255,255",
+          "190,215,255",
+          "210,220,255",
+          "235,240,255",
+        ];
+
+        const starColor =
+          starColors[
+            Math.floor(
+              Math.random() *
+                starColors.length
+            )
+          ];
+
+        /*
+          Simpan bintang.
+        */
 
         stars.push({
           x: heroX,
@@ -467,6 +560,7 @@ export default function StarBackground() {
           galaxyRadius,
 
           size,
+
           opacity:
             Math.random() * 0.5 +
             0.25,
@@ -475,6 +569,10 @@ export default function StarBackground() {
             Math.random(),
 
           bright,
+
+          glowSize,
+          glowOpacity,
+          starColor,
 
           twinkleSpeed:
             Math.random() * 0.8 +
@@ -574,7 +672,9 @@ export default function StarBackground() {
         time * 0.001;
 
       /*
-        Smooth scroll
+        ========================
+        SMOOTH SCROLL
+        ========================
       */
 
       smoothScroll +=
@@ -583,7 +683,9 @@ export default function StarBackground() {
         0.055;
 
       /*
-        Smooth mouse
+        ========================
+        SMOOTH MOUSE
+        ========================
       */
 
       smoothMouseX +=
@@ -614,7 +716,8 @@ export default function StarBackground() {
       }
 
       /*
-        Smooth transition.
+        Smooth transition
+        antar formation.
       */
 
       currentFormation +=
@@ -624,7 +727,7 @@ export default function StarBackground() {
 
       /*
         ========================
-        BACKGROUND
+        CLEAR BACKGROUND
         ========================
       */
 
@@ -634,6 +737,10 @@ export default function StarBackground() {
         width,
         height
       );
+
+      /*
+        Base background.
+      */
 
       ctx.fillStyle =
         "#03040a";
@@ -769,6 +876,13 @@ export default function StarBackground() {
             1
           );
 
+        /*
+          Gunakan deterministic
+          pseudo-random berdasarkan
+          index supaya dust tidak
+          berkedip setiap frame.
+        */
+
         for (
           let i = 0;
           i < 140;
@@ -782,7 +896,8 @@ export default function StarBackground() {
 
           const radius =
             0.15 +
-            Math.random() *
+            ((i * 37) % 100) /
+              100 *
               0.8;
 
           const dustX =
@@ -829,7 +944,9 @@ export default function StarBackground() {
         const star of stars
       ) {
         /*
-          Twinkle
+          ======================
+          TWINKLE
+          ======================
         */
 
         const twinkle =
@@ -854,9 +971,9 @@ export default function StarBackground() {
           star.scatteredY;
 
         /*
-          SCATTERED
-          ↕
-          13
+          ======================
+          SCATTERED → 13
+          ======================
         */
 
         if (
@@ -880,9 +997,9 @@ export default function StarBackground() {
         }
 
         /*
-          13
-          ↕
-          GALAXY
+          ======================
+          13 → GALAXY
+          ======================
         */
 
         else if (
@@ -906,7 +1023,9 @@ export default function StarBackground() {
         }
 
         /*
+          ======================
           GALAXY
+          ======================
         */
 
         else {
@@ -918,7 +1037,9 @@ export default function StarBackground() {
         }
 
         /*
-          Smooth position.
+          ======================
+          SMOOTH POSITION
+          ======================
         */
 
         star.x = lerp(
@@ -957,7 +1078,8 @@ export default function StarBackground() {
             );
 
           /*
-            Bintang dekat core
+            Bintang lebih dekat
+            dengan pusat bergerak
             sedikit lebih cepat.
           */
 
@@ -965,10 +1087,6 @@ export default function StarBackground() {
             0.055 -
             star.galaxyRadius *
               0.025;
-
-          /*
-            Rotasi.
-          */
 
           const rotation =
             seconds *
@@ -1074,6 +1192,10 @@ export default function StarBackground() {
           star.driftY *
           100;
 
+        /*
+          FINAL POSITION
+        */
+
         const x =
           finalX +
           mouseOffsetX +
@@ -1086,7 +1208,7 @@ export default function StarBackground() {
 
         /*
           ======================
-          SIZE
+          STAR SIZE
           ======================
         */
 
@@ -1100,7 +1222,7 @@ export default function StarBackground() {
 
         /*
           ======================
-          OPACITY
+          STAR OPACITY
           ======================
         */
 
@@ -1113,41 +1235,109 @@ export default function StarBackground() {
           );
 
         /*
-          ======================
-          GLOW
-          ======================
+          ============================
+          STAR GLOW
+          ============================
         */
 
-        if (star.bright) {
-          ctx.shadowBlur = 15;
+        /*
+          SEMUA bintang mendapatkan
+          radial glow.
+        */
 
-          ctx.shadowColor =
-            `rgba(220,235,255,${
-              alpha * 0.9
-            })`;
-        } else {
-          ctx.shadowBlur =
-            4 + size * 5;
+        const glowRadius =
+          size *
+          star.glowSize *
+          (star.bright
+            ? 1.5
+            : 1);
 
-          ctx.shadowColor =
-            `rgba(180,215,255,${
-              alpha * 0.55
-            })`;
-        }
+        const glow =
+          ctx.createRadialGradient(
+            x,
+            y,
+            0,
+            x,
+            y,
+            glowRadius
+          );
 
         /*
-          Draw star.
+          Pusat glow.
+        */
+
+        glow.addColorStop(
+          0,
+          `rgba(${star.starColor},${
+            alpha *
+            star.glowOpacity *
+            (star.bright
+              ? 1.5
+              : 1)
+          })`
+        );
+
+        /*
+          Inner glow.
+        */
+
+        glow.addColorStop(
+          0.08,
+          `rgba(${star.starColor},${
+            alpha *
+            star.glowOpacity *
+            0.8
+          })`
+        );
+
+        /*
+          Mid glow.
+        */
+
+        glow.addColorStop(
+          0.25,
+          `rgba(${star.starColor},${
+            alpha *
+            star.glowOpacity *
+            0.35
+          })`
+        );
+
+        /*
+          Outer glow.
+        */
+
+        glow.addColorStop(
+          0.55,
+          `rgba(${star.starColor},${
+            alpha *
+            star.glowOpacity *
+            0.08
+          })`
+        );
+
+        /*
+          Fade completely.
+        */
+
+        glow.addColorStop(
+          1,
+          `rgba(${star.starColor},0)`
+        );
+
+        /*
+          Draw glow.
         */
 
         ctx.beginPath();
 
         ctx.fillStyle =
-          `rgba(225,235,255,${alpha})`;
+          glow;
 
         ctx.arc(
           x,
           y,
-          size,
+          glowRadius,
           0,
           Math.PI * 2
         );
@@ -1155,37 +1345,120 @@ export default function StarBackground() {
         ctx.fill();
 
         /*
-          Bright star memiliki
-          titik inti yang lebih putih.
+          ============================
+          STAR CORE
+          ============================
         */
 
-        if (
-          star.bright &&
-          currentFormation >
-            1.1
-        ) {
-          ctx.shadowBlur = 0;
+        /*
+          Core kecil.
+
+          Mayoritas bintang dibuat
+          sangat kecil supaya tidak
+          terlihat seperti bola.
+        */
+
+        const coreSize =
+          star.bright
+            ? Math.max(
+                size * 0.55,
+                1.1
+              )
+            : Math.max(
+                size * 0.32,
+                0.35
+              );
+
+        ctx.beginPath();
+
+        ctx.fillStyle =
+          `rgba(255,255,255,${
+            Math.min(
+              alpha *
+                (star.bright
+                  ? 1.25
+                  : 1),
+              1
+            )
+          })`;
+
+        ctx.arc(
+          x,
+          y,
+          coreSize,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fill();
+
+        /*
+          ============================
+          BRIGHT STAR RAYS
+          ============================
+        */
+
+        /*
+          Hanya sebagian kecil
+          bintang yang mendapatkan
+          efek cross-ray.
+        */
+
+        if (star.bright) {
+          const ray =
+            size * 4.5;
+
+          const rayAlpha =
+            alpha * 0.22;
+
+          ctx.strokeStyle =
+            `rgba(225,235,255,${rayAlpha})`;
+
+          ctx.lineWidth = 0.5;
+
+          /*
+            Vertical ray.
+          */
 
           ctx.beginPath();
 
-          ctx.fillStyle =
-            `rgba(255,255,255,${
-              alpha * 0.9
-            })`;
-
-          ctx.arc(
+          ctx.moveTo(
             x,
-            y,
-            size * 0.45,
-            0,
-            Math.PI * 2
+            y - ray
           );
 
-          ctx.fill();
+          ctx.lineTo(
+            x,
+            y + ray
+          );
+
+          ctx.stroke();
+
+          /*
+            Horizontal ray.
+          */
+
+          ctx.beginPath();
+
+          ctx.moveTo(
+            x - ray,
+            y
+          );
+
+          ctx.lineTo(
+            x + ray,
+            y
+          );
+
+          ctx.stroke();
         }
       }
 
-      ctx.shadowBlur = 0;
+      /*
+        ========================
+        NEXT FRAME
+        ========================
+      */
 
       animationFrame =
         requestAnimationFrame(
@@ -1202,6 +1475,12 @@ export default function StarBackground() {
     resize();
 
     createStars();
+
+    /*
+      ==========================
+      EVENT LISTENERS
+      ==========================
+    */
 
     window.addEventListener(
       "resize",
@@ -1223,6 +1502,12 @@ export default function StarBackground() {
         passive: true,
       }
     );
+
+    /*
+      ==========================
+      START ANIMATION
+      ==========================
+    */
 
     animationFrame =
       requestAnimationFrame(
