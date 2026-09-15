@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, ReactNode } from "react";
-import { motion, useScroll, useTransform } from "motion/react";
+import { useRef } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import type { ReactNode } from "react";
 
 export default function ScrollExit({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -16,7 +18,10 @@ export default function ScrollExit({ children }: { children: ReactNode }) {
   const opacity = useTransform(scrollYProgress, [0, 1], [1, 0.5]);
 
   return (
-    <motion.div ref={ref} style={{ y, scale, opacity }}>
+    <motion.div
+      ref={ref}
+      style={shouldReduceMotion ? undefined : { y, scale, opacity }}
+    >
       {children}
     </motion.div>
   );
