@@ -19,19 +19,36 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ganti-dengan-domain-asli.vercel.app"),
-  title: "Muhamad Ramdhani Fathul Muttaqin",
+  title: "Muhamad Ramdhani Fathul Muttaqin — Informatics Student & Builder",
   description:
-    "Portfolio Muhamad Ramdhani Fathul Muttaqin — Backend & Full-Stack Developer (Golang, Laravel, Next.js, React).",
+    "The portfolio of Muhamad Ramdhani Fathul Muttaqin — an Informatics student who learns by building software, web applications, mobile apps, and real-time systems.",
+  keywords: [
+    "Muhamad Ramdhani Fathul Muttaqin",
+    "Ramdhani",
+    "Informatics Student",
+    "Software Developer",
+    "Web Developer",
+    "Golang",
+    "Laravel",
+    "Next.js",
+    "Flutter",
+  ],
+  authors: [{ name: "Muhamad Ramdhani Fathul Muttaqin" }],
   openGraph: {
-    title: "Muhamad Ramdhani Fathul Muttaqin",
-    description: "Backend & Full-Stack Developer — Golang, Laravel, Next.js, React",
+    title: "Muhamad Ramdhani Fathul Muttaqin — Informatics Student & Builder",
+    description:
+      "An Informatics student learning by building software, web applications, mobile apps, and real-time systems.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Muhamad Ramdhani Fathul Muttaqin",
-    description: "Backend & Full-Stack Developer — Golang, Laravel, Next.js, React",
+    title: "Muhamad Ramdhani Fathul Muttaqin — Informatics Student & Builder",
+    description:
+      "An Informatics student learning by building software, web applications, mobile apps, and real-time systems.",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -44,6 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         {children}
         <div
+          aria-hidden="true"
           className="pointer-events-none fixed inset-0 z-[70] opacity-[0.035] mix-blend-overlay"
           style={{
             backgroundImage:
