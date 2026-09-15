@@ -5,90 +5,134 @@ import { motion } from "motion/react";
 const links = [
   { label: "Email", value: "idanmrfm0@gmail.com", href: "mailto:idanmrfm0@gmail.com" },
   { label: "GitHub", value: "github.com/iddaann", href: "https://github.com/iddaann" },
-  { label: "LinkedIn", value: "https://www.linkedin.com/in/Idan", href: "https://www.linkedin.com/in/muhammad-ramdhani-fathul-muttaqin-214495368/" },
+  {
+    label: "LinkedIn",
+    value: "linkedin.com/in/muhammad-ramdhani-fathul-muttaqin",
+    href: "https://www.linkedin.com/in/muhammad-ramdhani-fathul-muttaqin-214495368/",
+  },
 ];
 
 export default function Contact() {
   return (
-    <section className="relative flex min-h-[80vh] flex-col justify-center px-6 py-32">
-      <div className="mx-auto w-full max-w-4xl">
+    <section className="relative isolate flex min-h-[90vh] items-center overflow-hidden px-6 py-32">
+      {/* Quiet closing-scene atmosphere */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-1/2 top-1/2 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.025] blur-3xl" />
+        <div className="absolute left-[12%] top-[24%] h-1 w-1 rounded-full bg-white/60 shadow-[0_0_18px_4px_rgba(255,255,255,0.18)]" />
+        <div className="absolute right-[16%] top-[34%] h-1.5 w-1.5 rounded-full bg-white/50 shadow-[0_0_20px_5px_rgba(255,255,255,0.16)]" />
+        <div className="absolute left-[22%] bottom-[22%] h-1 w-1 rounded-full bg-white/40" />
+        <div className="absolute right-[28%] bottom-[18%] h-1 w-1 rounded-full bg-white/50" />
+        <div className="absolute left-1/2 top-0 h-full w-px bg-gradient-to-b from-transparent via-white/[0.04] to-transparent" />
+      </div>
+
+      <div className="mx-auto w-full max-w-6xl">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
+          viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.8 }}
-          className="mb-8"
+          className="mb-10"
         >
-          <span className="text-xs uppercase tracking-[0.35em] text-white/40">
-            06 — Contact
+          <span className="text-xs uppercase tracking-[0.35em] text-white/35">
+            08 — Contact
           </span>
         </motion.div>
 
-        <motion.h2
-          initial={{ opacity: 0, y: 50, filter: "blur(10px)" }}
-          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-3xl text-4xl font-medium leading-[1.1] tracking-[-0.03em] text-white sm:text-5xl md:text-6xl"
-        >
-          Let&apos;s build something together.
-        </motion.h2>
+        <div className="max-w-5xl">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.8, delay: 0.05 }}
+            className="mb-5 text-xs uppercase tracking-[0.3em] text-white/30"
+          >
+            The next thing could start here.
+          </motion.p>
 
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.9, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-6 max-w-xl text-sm leading-7 text-white/50 md:text-base"
-        >
-          Open to freelance work, collaboration, or just a chat about
-          backend architecture and web development.
-        </motion.p>
+          <motion.h2
+            initial={{ opacity: 0, y: 60, filter: "blur(12px)" }}
+            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 1.15, ease: [0.22, 1, 0.36, 1] }}
+            className="text-5xl font-medium leading-[0.95] tracking-[-0.055em] text-white sm:text-6xl md:text-8xl"
+          >
+            Let&apos;s make
+            <br />
+            something <span className="text-white/30">real.</span>
+          </motion.h2>
+        </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.9, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-12"
+          viewport={{ once: true, amount: 0.35 }}
+          transition={{ duration: 0.9, delay: 0.2 }}
+          className="mt-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between"
         >
+          <p className="max-w-md text-sm leading-7 text-white/45 md:text-base">
+            Have an idea, a project, or simply want to talk about technology?
+            I&apos;m always open to meaningful conversations and new things to build.
+          </p>
+
           <a
-            href="/cv.pdf"
-            download
-            className="inline-flex items-center gap-3 rounded-full border border-white/20 px-8 py-4 text-sm uppercase tracking-[0.2em] text-white transition-colors duration-300 hover:border-white/50 hover:bg-white/5"
+            href="mailto:idanmrfm0@gmail.com"
+            className="group inline-flex w-fit items-center gap-4 rounded-full border border-white/15 bg-white/[0.03] px-6 py-4 text-sm text-white backdrop-blur-sm transition-all duration-500 hover:border-white/35 hover:bg-white/[0.07]"
           >
-            Download CV
+            <span>Start a conversation</span>
+            <span className="transition-transform duration-500 group-hover:translate-x-1">
+              ↗
+            </span>
           </a>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.9, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-16 flex flex-col gap-4 border-t border-white/10 pt-10 sm:flex-row sm:items-center sm:justify-between"
+          transition={{ duration: 1, delay: 0.35 }}
+          className="mt-24 border-t border-white/10 pt-8"
         >
-          {links.map((item) => {
-            const isExternal = item.href.startsWith("http");
-            return (
-              <a
-                key={item.label}
-                href={item.href}
-                target={isExternal ? "_blank" : undefined}
-                rel="noreferrer"
-                className="group flex items-center gap-2 text-sm text-white/50 transition-colors duration-300 hover:text-white"
-              >
-                <span className="text-[10px] uppercase tracking-[0.25em] text-white/30">
-                  {item.label}
-                </span>
-                <span>{item.value}</span>
-              </a>
-            );
-          })}
+          <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
+              {links.map((item) => {
+                const isExternal = item.href.startsWith("http");
+
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target={isExternal ? "_blank" : undefined}
+                    rel={isExternal ? "noreferrer" : undefined}
+                    className="group w-fit text-sm text-white/45 transition-colors duration-300 hover:text-white"
+                  >
+                    <span className="mr-2 text-[10px] uppercase tracking-[0.22em] text-white/25">
+                      {item.label}
+                    </span>
+                    <span className="relative">
+                      {item.value}
+                      <span className="absolute -bottom-1 left-0 h-px w-0 bg-white/60 transition-all duration-500 group-hover:w-full" />
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+
+            <a
+              href="/cv.pdf"
+              download
+              className="group flex w-fit items-center gap-3 text-xs uppercase tracking-[0.2em] text-white/45 transition-colors duration-300 hover:text-white"
+            >
+              <span>Download CV</span>
+              <span className="transition-transform duration-300 group-hover:translate-y-0.5">
+                ↓
+              </span>
+            </a>
+          </div>
         </motion.div>
 
-        <div className="mt-16 text-xs text-white/20">
-          © {new Date().getFullYear()} Muhamad Ramdhani Fathul Muttaqin
+        <div className="mt-12 flex flex-col gap-2 text-[10px] uppercase tracking-[0.25em] text-white/20 sm:flex-row sm:items-center sm:justify-between">
+          <span>© {new Date().getFullYear()} Muhamad Ramdhani Fathul Muttaqin</span>
+          <span>Keep building.</span>
         </div>
       </div>
     </section>
