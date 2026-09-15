@@ -2,42 +2,46 @@
 
 import { useEffect, useRef } from "react";
 
-interface Star {
+interface Particle {
+  x: number;
+  y: number;
+  z: number;
+  radius: number;
+  arm: number;
+  phase: number;
+  speed: number;
+  size: number;
+  brightness: number;
+  twinkle: number;
+  twinkleOffset: number;
+  color: [number, number, number];
   scatteredX: number;
   scatteredY: number;
   burstX: number;
   burstY: number;
-  galaxyX: number;
-  galaxyY: number;
-  galaxyRadius: number;
-  galaxyDepth: number;
-  size: number;
-  opacity: number;
-  depth: number;
-  bright: boolean;
-  color: string;
-  twinkleSpeed: number;
-  twinkleOffset: number;
 }
 
-const DESKTOP_STAR_COUNT = 1400;
-const MOBILE_STAR_COUNT = 360;
-const GALAXY_ROTATION_SPEED = 0.045;
-const GALAXY_TILT = 0.32;
-const GALAXY_VERTICAL_OFFSET = -0.08;
-const GALAXY_CAMERA_ZOOM = 0.024;
-const GALAXY_ARMS = 2;
-const GALAXY_TURNS = 1.35;
+const DESKTOP_COUNT = 2400;
+const MOBILE_COUNT = 700;
+const ARMS = 2;
+const SPIRAL_TURNS = 1.75;
+const BURST_SPEED = 0.032;
+const GALAXY_BLEND_SPEED = 0.055;
+const ORBIT_SPEED = 0.00018;
 
-function lerp(a: number, b: number, amount: number) {
-  return a + (b - a) * amount;
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+function smoothstep(t: number) {
+  return t * t * (3 - 2 * t);
 }
 
 function randomNormal() {
   let u = 0;
   let v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(Math.PI * 2 * v);
 }
 
@@ -46,368 +50,313 @@ export default function StarBackground() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
+    if (!canvas) return;
 
-    let width = 0;
-    let height = 0;
+    const gl = canvas.getContext("webgl", {
+      alpha: false,
+      antialias: false,
+      powerPreference: "high-performance",
+    });
+    if (!gl) return;
+
+    const vertexSource = `
+      attribute vec3 aPosition;
+      attribute float aSize;
+      attribute float aAlpha;
+      attribute vec3 aColor;
+      varying float vAlpha;
+      varying vec3 vColor;
+      uniform vec2 uResolution;
+      uniform float uPointScale;
+      void main() {
+        gl_Position = vec4(aPosition, 1.0);
+        gl_PointSize = max(1.0, aSize * uPointScale * (1.0 / max(0.25, 1.0 + aPosition.z * 0.65)));
+        vAlpha = aAlpha;
+        vColor = aColor;
+      }
+    `;
+
+    const fragmentSource = `
+      precision mediump float;
+      varying float vAlpha;
+      varying vec3 vColor;
+      void main() {
+        vec2 p = gl_PointCoord - 0.5;
+        float d = length(p);
+        float core = smoothstep(0.5, 0.0, d);
+        float glow = smoothstep(0.5, 0.05, d);
+        float alpha = (core * 0.9 + glow * 0.18) * vAlpha;
+        if (alpha < 0.01) discard;
+        gl_FragColor = vec4(vColor, alpha);
+      }
+    `;
+
+    const compile = (type: number, source: string) => {
+      const shader = gl.createShader(type);
+      if (!shader) throw new Error("Unable to create shader");
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        const log = gl.getShaderInfoLog(shader) || "Shader compilation failed";
+        gl.deleteShader(shader);
+        throw new Error(log);
+      }
+      return shader;
+    };
+
+    const program = gl.createProgram();
+    if (!program) return;
+    const vertexShader = compile(gl.VERTEX_SHADER, vertexSource);
+    const fragmentShader = compile(gl.FRAGMENT_SHADER, fragmentSource);
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
+
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.clearColor(0.011, 0.016, 0.04, 1);
+
+    const positionLocation = gl.getAttribLocation(program, "aPosition");
+    const sizeLocation = gl.getAttribLocation(program, "aSize");
+    const alphaLocation = gl.getAttribLocation(program, "aAlpha");
+    const colorLocation = gl.getAttribLocation(program, "aColor");
+    const pointScaleLocation = gl.getUniformLocation(program, "uPointScale");
+    const resolutionLocation = gl.getUniformLocation(program, "uResolution");
+
+    const positionBuffer = gl.createBuffer();
+    const sizeBuffer = gl.createBuffer();
+    const alphaBuffer = gl.createBuffer();
+    const colorBuffer = gl.createBuffer();
+    if (!positionBuffer || !sizeBuffer || !alphaBuffer || !colorBuffer) return;
+
+    let width = 1;
+    let height = 1;
     let dpr = 1;
-    let raf = 0;
-    let lastFrame = 0;
-    let pageVisible = !document.hidden;
-    let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let finePointer = window.matchMedia("(pointer: fine)").matches;
-    let atmosphere: CanvasGradient | null = null;
-
-    let targetMouseX = 0;
-    let targetMouseY = 0;
-    let smoothMouseX = 0;
-    let smoothMouseY = 0;
+    let frame = 0;
+    let last = 0;
     let burstProgress = 0;
-    let burstStarted = false;
     let galaxyProgress = 0;
     let galaxyVisible = false;
-
-    const stars: Star[] = [];
-    const starColors = [
-      "225,235,255",
-      "255,255,255",
-      "190,215,255",
-      "210,220,255",
-      "235,240,255",
-      "255,220,145",
-    ];
+    let burstStarted = false;
+    let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let finePointer = window.matchMedia("(pointer: fine)").matches;
+    let targetMouseX = 0;
+    let targetMouseY = 0;
+    let mouseX = 0;
+    let mouseY = 0;
+    let particles: Particle[] = [];
 
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
-      dpr = Math.min(window.devicePixelRatio || 1, width < 768 ? 1.25 : 1.75);
+      dpr = Math.min(window.devicePixelRatio || 1, width < 768 ? 1.25 : 1.6);
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      if (width >= 768) {
-        atmosphere = ctx.createRadialGradient(
-          width / 2,
-          height / 2,
-          0,
-          width / 2,
-          height / 2,
-          width * 0.7,
-        );
-        atmosphere.addColorStop(0, "rgba(45,80,160,0.075)");
-        atmosphere.addColorStop(0.45, "rgba(30,50,120,0.03)");
-        atmosphere.addColorStop(1, "rgba(3,4,10,0)");
-      } else {
-        atmosphere = null;
-      }
+      gl.viewport(0, 0, canvas.width, canvas.height);
     };
 
-    const createStars = () => {
-      stars.length = 0;
+    const makeParticles = () => {
       const mobile = width < 768;
-      const count = mobile ? MOBILE_STAR_COUNT : DESKTOP_STAR_COUNT;
-      const galaxyWidth = Math.min(width * 0.96, 1420);
-      const galaxyHeight = Math.min(height * 0.36, 450);
+      const count = mobile ? MOBILE_COUNT : DESKTOP_COUNT;
+      const galaxyWidth = Math.min(width * 0.92, 1500);
+      const galaxyHeight = Math.min(height * 0.34, 420);
+      particles = [];
 
       for (let i = 0; i < count; i++) {
-        const randomAngle = Math.random() * Math.PI * 2;
-        const burstRadius =
-          Math.pow(Math.random(), 0.7) *
-          Math.min(width, height) *
-          (mobile ? 0.045 : 0.065);
+        const random = Math.random();
+        const isCore = random < 0.19;
+        const radius = isCore
+          ? Math.pow(Math.random(), 2.5) * 0.34
+          : 0.09 + Math.pow(Math.random(), 0.72) * 0.91;
+        const arm = Math.floor(Math.random() * ARMS);
+        const armBase = (arm / ARMS) * Math.PI * 2;
+        const theta = isCore
+          ? Math.random() * Math.PI * 2
+          : armBase + radius * SPIRAL_TURNS * Math.PI * 2 + randomNormal() * (0.025 + radius * 0.07);
 
-        const population = Math.random();
-        let radius: number;
-        let galaxyX: number;
-        let galaxyY: number;
-        let armStrength = 0;
+        const armWidth = isCore ? 0 : (4 + radius * 24) * (0.45 + Math.random() * 0.75);
+        const tangentOffset = isCore ? 0 : randomNormal() * (3 + radius * 10);
+        const x = isCore
+          ? Math.cos(theta) * radius * galaxyWidth * 0.15 + randomNormal() * 5
+          : Math.cos(theta) * radius * galaxyWidth * 0.5 + randomNormal() * armWidth + tangentOffset;
+        const y = isCore
+          ? Math.sin(theta) * radius * galaxyHeight * 0.22 + randomNormal() * 4
+          : Math.sin(theta) * radius * galaxyHeight * 0.5 + randomNormal() * armWidth * 0.48;
+        const z = isCore
+          ? randomNormal() * 0.06
+          : randomNormal() * (0.025 + radius * 0.08);
 
-        if (population < 0.23) {
-          // Dense, irregular stellar core.
-          radius = Math.pow(Math.random(), 2.45) * 0.32;
-          const angle = Math.random() * Math.PI * 2;
-          const coreRadius = radius * galaxyWidth * 0.18;
-          galaxyX = Math.cos(angle) * coreRadius;
-          galaxyY = Math.sin(angle) * coreRadius * 0.72;
-          galaxyX += randomNormal() * 7;
-          galaxyY += randomNormal() * 5;
-        } else if (population < 0.97) {
-          // True spiral-arm sampling: choose a point on a curved centerline,
-          // then offset it perpendicular to the tangent. This keeps particles
-          // on visible arms instead of filling the whole ellipse.
-          radius = 0.08 + Math.pow(Math.random(), 0.92) * 0.92;
-          const arm = Math.floor(Math.random() * GALAXY_ARMS);
-          const armBase = (arm / GALAXY_ARMS) * Math.PI * 2;
-          const theta = armBase + radius * GALAXY_TURNS * Math.PI * 2;
+        const gold = Math.random() < 0.025;
+        const blue = Math.random() < 0.24;
+        const color: [number, number, number] = gold
+          ? [1.0, 0.72, 0.32]
+          : blue
+            ? [0.62, 0.78, 1.0]
+            : [0.92 + Math.random() * 0.08, 0.94 + Math.random() * 0.06, 1.0];
 
-          const xRadius = radius * galaxyWidth * 0.5;
-          const yRadius = radius * galaxyHeight * 0.5;
-          const centerX = Math.cos(theta) * xRadius;
-          const centerY = Math.sin(theta) * yRadius;
-
-          // Tangent of the elliptical spiral path.
-          const dx =
-            -Math.sin(theta) * xRadius +
-            Math.cos(theta) * (galaxyWidth * 0.5 * GALAXY_TURNS * Math.PI * 2 * radius);
-          const dy =
-            Math.cos(theta) * yRadius +
-            Math.sin(theta) * (galaxyHeight * 0.5 * GALAXY_TURNS * Math.PI * 2 * radius);
-          const tangentLength = Math.hypot(dx, dy) || 1;
-          const normalX = -dy / tangentLength;
-          const normalY = dx / tangentLength;
-
-          // Arms are thicker and more broken toward the outside.
-          const armWidth = (4 + radius * 20) * (0.55 + Math.random() * 0.75);
-          const armOffset = randomNormal() * armWidth;
-          const alongArm = (Math.random() - 0.5) * (4 + radius * 12);
-
-          galaxyX = centerX + normalX * armOffset + (dx / tangentLength) * alongArm;
-          galaxyY = centerY + normalY * armOffset + (dy / tangentLength) * alongArm;
-          armStrength = 1;
-        } else {
-          // Sparse outer stars: mostly near the arms, not a uniform disk.
-          radius = 0.68 + Math.pow(Math.random(), 0.7) * 0.32;
-          const arm = Math.floor(Math.random() * GALAXY_ARMS);
-          const armBase = (arm / GALAXY_ARMS) * Math.PI * 2;
-          const theta = armBase + radius * GALAXY_TURNS * Math.PI * 2;
-          const xRadius = radius * galaxyWidth * 0.5;
-          const yRadius = radius * galaxyHeight * 0.5;
-          const spread = 0.3 + Math.random() * 0.35;
-          const angle = theta + randomNormal() * spread;
-          galaxyX = Math.cos(angle) * xRadius;
-          galaxyY = Math.sin(angle) * yRadius;
-        }
-
-        // Small asymmetric cloud structure makes the arms feel organic.
-        if (armStrength) {
-          const clump = Math.sin(radius * 24 + randomAngle * 2.7);
-          galaxyX += clump * (3 + radius * 14);
-          galaxyY += clump * (1.5 + radius * 7);
-        }
-
-        const core = Math.max(0, 1 - radius);
-        const isGold = Math.random() < 0.018;
-        const starSize =
-          Math.random() < 0.07
-            ? Math.random() * 1.7 + 1.1 + core * 0.4
-            : Math.random() * 0.82 + 0.38 + core * 0.14;
-        const starOpacity = Math.min(
-          0.92,
-          Math.random() * 0.5 + 0.27 + core * 0.2,
-        );
-
-        stars.push({
+        particles.push({
+          x,
+          y,
+          z,
+          radius,
+          arm,
+          phase: Math.random() * Math.PI * 2,
+          speed: ORBIT_SPEED * (0.35 + radius * 0.9) * (0.7 + Math.random() * 0.6),
+          size: Math.random() < 0.065 ? 2.4 + Math.random() * 2.2 : 0.7 + Math.random() * 1.25,
+          brightness: 0.45 + Math.random() * 0.55,
+          twinkle: 0.4 + Math.random() * 1.5,
+          twinkleOffset: Math.random() * Math.PI * 2,
+          color,
           scatteredX: Math.random() * width,
           scatteredY: Math.random() * height,
-          burstX: width / 2 + Math.cos(randomAngle) * burstRadius,
-          burstY: height / 2 + Math.sin(randomAngle) * burstRadius,
-          galaxyX: width / 2 + galaxyX,
-          galaxyY: height / 2 + galaxyY,
-          galaxyRadius: Math.min(1, radius),
-          galaxyDepth: Math.random(),
-          size: starSize,
-          opacity: starOpacity,
-          depth: Math.random(),
-          bright: Math.random() < 0.06,
-          color: isGold
-            ? "255,220,145"
-            : starColors[Math.floor(Math.random() * 5)],
-          twinkleSpeed: Math.random() * 0.8 + 0.2,
-          twinkleOffset: Math.random() * Math.PI * 2,
+          burstX: width / 2 + Math.cos(Math.random() * Math.PI * 2) * Math.min(width, height) * (mobile ? 0.04 : 0.065),
+          burstY: height / 2 + Math.sin(Math.random() * Math.PI * 2) * Math.min(width, height) * (mobile ? 0.04 : 0.065),
         });
       }
     };
 
     const handleResize = () => {
       resize();
-      createStars();
-      burstStarted = false;
+      makeParticles();
       burstProgress = 0;
       galaxyProgress = 0;
+      burstStarted = false;
     };
 
-    const handlePointerMove = (event: PointerEvent) => {
+    const pointerMove = (event: PointerEvent) => {
       if (!finePointer || reducedMotion) return;
       targetMouseX = event.clientX / width - 0.5;
       targetMouseY = event.clientY / height - 0.5;
     };
 
-    const startBurst = () => {
-      if (burstStarted) return;
-      burstStarted = true;
-      burstProgress = reducedMotion ? 1 : 0;
-    };
-
-    const handleVisibility = () => {
-      pageVisible = !document.hidden;
-      if (!pageVisible) {
-        cancelAnimationFrame(raf);
-        return;
-      }
-      lastFrame = 0;
-      raf = requestAnimationFrame(render);
-    };
-
     const marker = document.getElementById("idan-marker");
-    let observer: IntersectionObserver | undefined;
-    if (marker) {
-      observer = new IntersectionObserver(
-        ([entry]) => {
+    const observer = marker
+      ? new IntersectionObserver(([entry]) => {
           galaxyVisible = entry.isIntersecting;
-        },
-        { threshold: 0.2 },
-      );
-      observer.observe(marker);
-    }
+        }, { threshold: 0.2 })
+      : undefined;
+    observer?.observe(marker as Element);
 
     const render = (time: number) => {
-      if (!pageVisible) return;
-
-      const mobile = width < 768;
-      const frameInterval = reducedMotion
-        ? 1000 / 12
-        : mobile
-          ? 1000 / 30
-          : 1000 / 60;
-
-      if (lastFrame && time - lastFrame < frameInterval) {
-        raf = requestAnimationFrame(render);
-        return;
-      }
-      lastFrame = time;
-
+      const dt = Math.min(32, last ? time - last : 16);
+      last = time;
       const seconds = time * 0.001;
+      const mobile = width < 768;
 
-      if (!burstStarted && window.scrollY < height) {
-        startBurst();
+      if (!burstStarted && window.scrollY < height * 1.15) {
+        burstStarted = true;
       }
-
       if (burstStarted && burstProgress < 1) {
-        burstProgress = reducedMotion
-          ? 1
-          : Math.min(1, burstProgress + (mobile ? 0.032 : 0.027));
+        burstProgress = reducedMotion ? 1 : Math.min(1, burstProgress + BURST_SPEED * (dt / 16));
       }
 
-      const galaxyTarget = galaxyVisible && burstProgress >= 1 ? 1 : 0;
+      const target = galaxyVisible && burstProgress >= 1 ? 1 : 0;
       galaxyProgress = reducedMotion
-        ? galaxyTarget
-        : lerp(galaxyProgress, galaxyTarget, mobile ? 0.09 : 0.065);
+        ? target
+        : lerp(galaxyProgress, target, 1 - Math.pow(1 - GALAXY_BLEND_SPEED, dt / 16));
 
-      if (!reducedMotion) {
-        smoothMouseX = lerp(smoothMouseX, targetMouseX, 0.04);
-        smoothMouseY = lerp(smoothMouseY, targetMouseY, 0.04);
-      }
+      mouseX = lerp(mouseX, targetMouseX, 0.045);
+      mouseY = lerp(mouseY, targetMouseY, 0.045);
 
-      ctx.fillStyle = "#03040a";
-      ctx.fillRect(0, 0, width, height);
+      gl.clear(gl.COLOR_BUFFER_BIT);
 
-      if (atmosphere) {
-        ctx.fillStyle = atmosphere;
-        ctx.fillRect(0, 0, width, height);
-      }
+      const positions = new Float32Array(particles.length * 3);
+      const sizes = new Float32Array(particles.length);
+      const alphas = new Float32Array(particles.length);
+      const colors = new Float32Array(particles.length * 3);
+      const burstEase = 1 - Math.pow(1 - burstProgress, 3);
+      const galaxyEase = smoothstep(galaxyProgress);
 
-      const easedBurst = 1 - Math.pow(1 - burstProgress, 3);
-      const easedGalaxy = galaxyProgress * galaxyProgress * (3 - 2 * galaxyProgress);
-      const cameraZoom = 1 + easedGalaxy * GALAXY_CAMERA_ZOOM;
-      const galaxyCenterX = width / 2 + smoothMouseX * 8;
-      const galaxyCenterY = height / 2 + height * GALAXY_VERTICAL_OFFSET + smoothMouseY * 5;
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const scatteredX = lerp(p.burstX, p.scatteredX, burstEase);
+        const scatteredY = lerp(p.burstY, p.scatteredY, burstEase);
 
-      for (const star of stars) {
-        const scatteredX = lerp(star.burstX, star.scatteredX, easedBurst);
-        const scatteredY = lerp(star.burstY, star.scatteredY, easedBurst);
+        const orbit = reducedMotion ? 0 : seconds * p.speed;
+        const c = Math.cos(orbit);
+        const s = Math.sin(orbit);
+        const gx = p.x * c - p.y * s;
+        const gy = p.x * s + p.y * c;
+        const depth = p.z + Math.sin(seconds * 0.12 + p.phase) * 0.025;
 
-        const offsetX = star.galaxyX - width / 2;
-        const offsetY = star.galaxyY - height / 2;
-        const rotation = reducedMotion
-          ? 0
-          : seconds *
-            GALAXY_ROTATION_SPEED *
-            (0.32 + star.galaxyRadius * 0.68) *
-            easedGalaxy;
-        const cos = Math.cos(rotation);
-        const sin = Math.sin(rotation);
-        const orbitalX = offsetX * cos - offsetY * sin;
-        const orbitalY = offsetX * sin + offsetY * cos;
+        // Camera looks slightly down onto a thin 3D galactic disk.
+        const tilt = 0.23;
+        const projectedY = gy * Math.cos(tilt) - depth * 95 * Math.sin(tilt);
+        const projectedZ = gy * Math.sin(tilt) + depth * 95 * Math.cos(tilt);
+        const cameraScale = 1.0 / (1.0 + projectedZ * 0.00075);
+        const perspectiveX = gx * cameraScale;
+        const perspectiveY = projectedY * cameraScale;
+        const zoom = 1 + galaxyEase * 0.025;
 
-        const perspective = 1 - star.galaxyRadius * GALAXY_TILT;
-        const projectedX = orbitalX * cameraZoom;
-        const projectedY = orbitalY * perspective * cameraZoom;
+        const galaxyX = width / 2 + perspectiveX * zoom + mouseX * (8 + p.radius * 16);
+        const galaxyY = height / 2 - height * 0.075 + perspectiveY * zoom + mouseY * (5 + p.radius * 10);
+        const x = lerp(scatteredX, galaxyX, galaxyEase);
+        const y = lerp(scatteredY, galaxyY, galaxyEase);
 
-        let x = lerp(scatteredX, galaxyCenterX + projectedX, easedGalaxy);
-        let y = lerp(scatteredY, galaxyCenterY + projectedY, easedGalaxy);
-
-        if (!reducedMotion) {
-          const orbitalDrift =
-            Math.sin(seconds * (0.18 + star.galaxyDepth * 0.16) + star.twinkleOffset) *
-            star.galaxyRadius *
-            0.75;
-          const parallax = star.depth;
-          x += orbitalDrift + smoothMouseX * parallax * 10;
-          y +=
-            Math.cos(seconds * 0.12 + star.twinkleOffset) *
-              star.galaxyRadius *
-              0.5 +
-            smoothMouseY * parallax * 8;
-        }
+        positions[i * 3] = (x / width) * 2 - 1;
+        positions[i * 3 + 1] = 1 - (y / height) * 2;
+        positions[i * 3 + 2] = Math.max(-1, Math.min(1, projectedZ / 700));
 
         const twinkle = reducedMotion
           ? 1
-          : 0.72 +
-            Math.sin(seconds * star.twinkleSpeed + star.twinkleOffset) * 0.28;
-        const burstGlow = burstProgress < 1 ? 1 + (1 - burstProgress) * 1.8 : 1;
-        const alpha = Math.min(1, star.opacity * twinkle * burstGlow);
-        const size = star.bright ? star.size * 1.15 : star.size;
-
-        if (star.bright && galaxyProgress > 0.55) {
-          ctx.fillStyle = `rgba(${star.color},${alpha * 0.08})`;
-          ctx.beginPath();
-          ctx.arc(x, y, size * 3.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        ctx.fillStyle = `rgba(${star.color},${alpha})`;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
+          : 0.72 + Math.sin(seconds * p.twinkle + p.twinkleOffset) * 0.28;
+        const depthBrightness = Math.max(0.65, 1 - Math.abs(projectedZ) / 900);
+        sizes[i] = p.size * (0.8 + depthBrightness * 0.7) * (mobile ? 0.72 : 1);
+        alphas[i] = Math.min(1, p.brightness * twinkle * depthBrightness);
+        colors[i * 3] = p.color[0];
+        colors[i * 3 + 1] = p.color[1];
+        colors[i * 3 + 2] = p.color[2];
       }
 
-      raf = requestAnimationFrame(render);
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(positionLocation);
+      gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, sizeBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(sizeLocation);
+      gl.vertexAttribPointer(sizeLocation, 1, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, alphas, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(alphaLocation);
+      gl.vertexAttribPointer(alphaLocation, 1, gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, colors, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(colorLocation);
+      gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+
+      gl.uniform1f(pointScaleLocation, Math.min(width, height) * 0.012 * dpr);
+      gl.uniform2f(resolutionLocation, width, height);
+      gl.drawArrays(gl.POINTS, 0, particles.length);
+
+      frame = requestAnimationFrame(render);
     };
 
     resize();
-    createStars();
+    makeParticles();
     window.addEventListener("resize", handleResize, { passive: true });
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const pointerQuery = window.matchMedia("(pointer: fine)");
-    const handleMotionChange = () => {
-      reducedMotion = motionQuery.matches;
-      lastFrame = 0;
-      if (reducedMotion) {
-        burstProgress = 1;
-        galaxyProgress = galaxyVisible ? 1 : 0;
-      }
-    };
-    const handlePointerChange = () => {
-      finePointer = pointerQuery.matches;
-    };
-    motionQuery.addEventListener("change", handleMotionChange);
-    pointerQuery.addEventListener("change", handlePointerChange);
-    raf = requestAnimationFrame(render);
+    window.addEventListener("pointermove", pointerMove, { passive: true });
+    frame = requestAnimationFrame(render);
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(frame);
       observer?.disconnect();
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("visibilitychange", handleVisibility);
-      motionQuery.removeEventListener("change", handleMotionChange);
-      pointerQuery.removeEventListener("change", handlePointerChange);
+      window.removeEventListener("pointermove", pointerMove);
+      gl.deleteBuffer(positionBuffer);
+      gl.deleteBuffer(sizeBuffer);
+      gl.deleteBuffer(alphaBuffer);
+      gl.deleteBuffer(colorBuffer);
+      gl.deleteProgram(program);
+      gl.deleteShader(vertexShader);
+      gl.deleteShader(fragmentShader);
     };
   }, []);
 
@@ -415,7 +364,7 @@ export default function StarBackground() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 -z-10 h-full w-full"
+      className="pointer-events-none fixed inset-0 z-0 h-full w-full"
     />
   );
 }
