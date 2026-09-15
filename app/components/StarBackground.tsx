@@ -30,7 +30,8 @@ const ARMS = 2;
 const SPIRAL_TURNS = 1.75;
 const BURST_SPEED = 0.032;
 const GALAXY_BLEND_SPEED = 0.055;
-const ORBIT_SPEED = 0.00018;
+// Fast enough to visibly travel around the orbit, while still feeling calm.
+const ORBIT_SPEED = 0.0045;
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
@@ -212,7 +213,8 @@ export default function StarBackground() {
           orbitPhase: Math.random() * Math.PI * 2,
           orbitEccentricity: 0.92 + Math.random() * 0.16,
           orbitWobble: 0.015 + Math.random() * 0.035,
-          speed: ORBIT_SPEED * (0.35 + radius * 0.9) * (0.7 + Math.random() * 0.6),
+          // Inner stars complete their orbit faster; outer stars move more slowly.
+          speed: ORBIT_SPEED * (0.8 + (1 - radius) * 1.2) * (0.75 + Math.random() * 0.5),
           size: largeStar
             ? 1.35 + Math.random() * 1.05 + (1 - radius) * 0.18
             : 0.42 + Math.random() * 0.82 + (1 - radius) * 0.08,
