@@ -20,17 +20,25 @@ interface Star {
   twinkleOffset: number;
 }
 
-const DESKTOP_STAR_COUNT = 1100;
-const MOBILE_STAR_COUNT = 320;
+const DESKTOP_STAR_COUNT = 1400;
+const MOBILE_STAR_COUNT = 360;
 const GALAXY_ROTATION_SPEED = 0.045;
 const GALAXY_TILT = 0.32;
 const GALAXY_VERTICAL_OFFSET = -0.08;
 const GALAXY_CAMERA_ZOOM = 0.024;
-const GALAXY_ARMS = 3;
-const GALAXY_TURNS = 1.55;
+const GALAXY_ARMS = 2;
+const GALAXY_TURNS = 1.35;
 
 function lerp(a: number, b: number, amount: number) {
   return a + (b - a) * amount;
+}
+
+function randomNormal() {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(Math.PI * 2 * v);
 }
 
 export default function StarBackground() {
@@ -101,11 +109,8 @@ export default function StarBackground() {
       stars.length = 0;
       const mobile = width < 768;
       const count = mobile ? MOBILE_STAR_COUNT : DESKTOP_STAR_COUNT;
-
-      // Wide horizontal composition: the galaxy reads left-to-right while
-      // retaining enough black space around the outer arms.
       const galaxyWidth = Math.min(width * 0.96, 1420);
-      const galaxyHeight = Math.min(height * 0.38, 470);
+      const galaxyHeight = Math.min(height * 0.36, 450);
 
       for (let i = 0; i < count; i++) {
         const randomAngle = Math.random() * Math.PI * 2;
@@ -116,61 +121,77 @@ export default function StarBackground() {
 
         const population = Math.random();
         let radius: number;
-        let galaxyAngle: number;
+        let galaxyX: number;
+        let galaxyY: number;
         let armStrength = 0;
 
-        if (population < 0.25) {
-          // Compact luminous core. It is intentionally noisy rather than a
-          // perfect circle so the center feels like a real star field.
-          radius = Math.pow(Math.random(), 2.65) * 0.34;
-          galaxyAngle = Math.random() * Math.PI * 2;
-        } else if (population < 0.94) {
-          // Main spiral arms. Radius drives the curvature; angular noise is
-          // narrower near the core and wider toward the outer edge.
-          radius = 0.12 + Math.pow(Math.random(), 0.86) * 0.88;
+        if (population < 0.23) {
+          // Dense, irregular stellar core.
+          radius = Math.pow(Math.random(), 2.45) * 0.32;
+          const angle = Math.random() * Math.PI * 2;
+          const coreRadius = radius * galaxyWidth * 0.18;
+          galaxyX = Math.cos(angle) * coreRadius;
+          galaxyY = Math.sin(angle) * coreRadius * 0.72;
+          galaxyX += randomNormal() * 7;
+          galaxyY += randomNormal() * 5;
+        } else if (population < 0.97) {
+          // True spiral-arm sampling: choose a point on a curved centerline,
+          // then offset it perpendicular to the tangent. This keeps particles
+          // on visible arms instead of filling the whole ellipse.
+          radius = 0.08 + Math.pow(Math.random(), 0.92) * 0.92;
           const arm = Math.floor(Math.random() * GALAXY_ARMS);
           const armBase = (arm / GALAXY_ARMS) * Math.PI * 2;
-          const spiral = radius * GALAXY_TURNS * Math.PI * 2;
-          const spread = 0.045 + radius * 0.16;
-          galaxyAngle = armBase + spiral + (Math.random() - 0.5) * spread;
+          const theta = armBase + radius * GALAXY_TURNS * Math.PI * 2;
+
+          const xRadius = radius * galaxyWidth * 0.5;
+          const yRadius = radius * galaxyHeight * 0.5;
+          const centerX = Math.cos(theta) * xRadius;
+          const centerY = Math.sin(theta) * yRadius;
+
+          // Tangent of the elliptical spiral path.
+          const dx =
+            -Math.sin(theta) * xRadius +
+            Math.cos(theta) * (galaxyWidth * 0.5 * GALAXY_TURNS * Math.PI * 2 * radius);
+          const dy =
+            Math.cos(theta) * yRadius +
+            Math.sin(theta) * (galaxyHeight * 0.5 * GALAXY_TURNS * Math.PI * 2 * radius);
+          const tangentLength = Math.hypot(dx, dy) || 1;
+          const normalX = -dy / tangentLength;
+          const normalY = dx / tangentLength;
+
+          // Arms are thicker and more broken toward the outside.
+          const armWidth = (4 + radius * 20) * (0.55 + Math.random() * 0.75);
+          const armOffset = randomNormal() * armWidth;
+          const alongArm = (Math.random() - 0.5) * (4 + radius * 12);
+
+          galaxyX = centerX + normalX * armOffset + (dx / tangentLength) * alongArm;
+          galaxyY = centerY + normalY * armOffset + (dy / tangentLength) * alongArm;
           armStrength = 1;
         } else {
-          // A small population outside the arms gives the silhouette a
-          // natural dusty edge without turning it into a solid disk.
-          radius = 0.52 + Math.pow(Math.random(), 0.65) * 0.5;
-          galaxyAngle = Math.random() * Math.PI * 2;
+          // Sparse outer stars: mostly near the arms, not a uniform disk.
+          radius = 0.68 + Math.pow(Math.random(), 0.7) * 0.32;
+          const arm = Math.floor(Math.random() * GALAXY_ARMS);
+          const armBase = (arm / GALAXY_ARMS) * Math.PI * 2;
+          const theta = armBase + radius * GALAXY_TURNS * Math.PI * 2;
+          const xRadius = radius * galaxyWidth * 0.5;
+          const yRadius = radius * galaxyHeight * 0.5;
+          const spread = 0.3 + Math.random() * 0.35;
+          const angle = theta + randomNormal() * spread;
+          galaxyX = Math.cos(angle) * xRadius;
+          galaxyY = Math.sin(angle) * yRadius;
+        }
+
+        // Small asymmetric cloud structure makes the arms feel organic.
+        if (armStrength) {
+          const clump = Math.sin(radius * 24 + randomAngle * 2.7);
+          galaxyX += clump * (3 + radius * 14);
+          galaxyY += clump * (1.5 + radius * 7);
         }
 
         const core = Math.max(0, 1 - radius);
-        const radialScale = radius * (0.86 + Math.random() * 0.14);
-        const xRadius = radialScale * galaxyWidth * 0.5;
-        const yRadius = radialScale * galaxyHeight * 0.5;
-
-        let galaxyX = Math.cos(galaxyAngle) * xRadius;
-        let galaxyY = Math.sin(galaxyAngle) * yRadius;
-
-        if (armStrength) {
-          // Break the mathematical line into small star clouds. The offset is
-          // stronger outside the core, making the arms curved but organic.
-          const cloud = Math.sin(radius * 31 + galaxyAngle * 2.4 + randomAngle) *
-            (5 + radius * 20);
-          galaxyX += cloud * 0.7;
-          galaxyY += cloud * 0.34;
-        }
-
-        // Give the core a little volume and keep the outer region airy.
-        const localNoise = (Math.random() - 0.5) * (10 + radius * 28);
-        galaxyX += localNoise * 0.55;
-        galaxyY += localNoise;
-
-        if (population < 0.25) {
-          galaxyX += (Math.random() - 0.5) * 44 * core;
-          galaxyY += (Math.random() - 0.5) * 30 * core;
-        }
-
         const isGold = Math.random() < 0.018;
         const starSize =
-          Math.random() < 0.065
+          Math.random() < 0.07
             ? Math.random() * 1.7 + 1.1 + core * 0.4
             : Math.random() * 0.82 + 0.38 + core * 0.14;
         const starOpacity = Math.min(
