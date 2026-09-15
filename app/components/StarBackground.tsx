@@ -9,6 +9,7 @@ interface Star {
   burstY: number;
   galaxyX: number;
   galaxyY: number;
+  galaxyRadius: number;
   size: number;
   opacity: number;
   depth: number;
@@ -18,8 +19,8 @@ interface Star {
   twinkleOffset: number;
 }
 
-const DESKTOP_STAR_COUNT = 420;
-const MOBILE_STAR_COUNT = 190;
+const DESKTOP_STAR_COUNT = 560;
+const MOBILE_STAR_COUNT = 230;
 const GALAXY_ROTATION_SPEED = 0.045;
 
 function lerp(a: number, b: number, amount: number) {
@@ -86,9 +87,22 @@ export default function StarBackground() {
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
         const burstRadius = Math.pow(Math.random(), 0.7) * Math.min(width, height) * (mobile ? 0.045 : 0.065);
-        const radius = Math.pow(Math.random(), 1.15);
+
+        // Bias the distribution toward the core while keeping enough stars
+        // in the outer arms to make the spiral silhouette easy to read.
+        const radius = Math.pow(Math.random(), 1.35);
         const arm = Math.floor(Math.random() * 4);
-        const galaxyAngle = (arm / 4) * Math.PI * 2 + radius * Math.PI * 2.8 + (Math.random() - 0.5) * (0.12 + radius * 0.8);
+        const armSpread = 0.08 + radius * 0.38;
+        const galaxyAngle =
+          (arm / 4) * Math.PI * 2 +
+          radius * Math.PI * 2.8 +
+          (Math.random() - 0.5) * armSpread;
+
+        const core = 1 - radius;
+        const starSize = Math.random() < 0.075
+          ? Math.random() * 1.65 + 1.15 + core * 0.35
+          : Math.random() * 0.82 + 0.4 + core * 0.12;
+        const starOpacity = Math.min(0.92, Math.random() * 0.48 + 0.3 + core * 0.14);
 
         stars.push({
           scatteredX: Math.random() * width,
@@ -96,11 +110,12 @@ export default function StarBackground() {
           burstX: width / 2 + Math.cos(angle) * burstRadius,
           burstY: height / 2 + Math.sin(angle) * burstRadius,
           galaxyX: width / 2 + Math.cos(galaxyAngle) * radius * galaxyWidth * 0.5,
-          galaxyY: height / 2 + Math.sin(galaxyAngle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 20 * radius,
-          size: Math.random() < 0.08 ? Math.random() * 1.6 + 1.1 : Math.random() * 0.8 + 0.4,
-          opacity: Math.random() * 0.5 + 0.25,
+          galaxyY: height / 2 + Math.sin(galaxyAngle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 16 * radius,
+          galaxyRadius: radius,
+          size: starSize,
+          opacity: starOpacity,
           depth: Math.random(),
-          bright: Math.random() < 0.05,
+          bright: Math.random() < 0.055,
           color: starColors[Math.floor(Math.random() * starColors.length)],
           twinkleSpeed: Math.random() * 0.8 + 0.2,
           twinkleOffset: Math.random() * Math.PI * 2,
@@ -193,9 +208,8 @@ export default function StarBackground() {
         const scatteredX = lerp(star.burstX, star.scatteredX, easedBurst);
         const scatteredY = lerp(star.burstY, star.scatteredY, easedBurst);
 
-        // Keep the exact original galaxy coordinates. We only rotate the
-        // coordinate system around its center, so the spiral arms, density,
-        // and overall galaxy silhouette remain unchanged.
+        // Keep the exact galaxy coordinates and rotate the whole system
+        // around one center axis, preserving the spiral silhouette.
         const offsetX = star.galaxyX - width / 2;
         const offsetY = star.galaxyY - height / 2;
         const rotation = reducedMotion ? 0 : seconds * GALAXY_ROTATION_SPEED * easedGalaxy;
