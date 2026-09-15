@@ -58,7 +58,17 @@ export default function Hero() {
           initial={{ opacity: 0, y: 10 }}
           animate={loaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
           transition={{ duration: 0.8, delay: 0.9 }}
-          className="mt-5 flex max-w-[250px] items-center gap-3 sm:mt-6"
+          className="mt-4 flex items-center gap-3 sm:mt-5"
+        >
+          <span className="h-px w-6 bg-white/15 sm:w-8" />
+          <span className="font-mono text-[9px] uppercase tracking-[0.38em] text-white/45 sm:text-[10px]">IDAN</span>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={loaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+          transition={{ duration: 0.8, delay: 1.05 }}
+          className="mt-3 flex max-w-[250px] items-center gap-3 sm:mt-4"
         >
           <span className="h-px flex-1 bg-white/10" />
           <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-white/25">Still learning, still building</span>
