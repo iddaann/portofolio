@@ -62,6 +62,19 @@ export default function Hero() {
       ref={ref}
       className="relative z-20 min-h-[620px] h-[100svh] w-full overflow-hidden px-4 sm:px-6 md:px-16 lg:px-24"
     >
+      {/* Small editorial identity marker */}
+      <motion.div
+        initial={{ opacity: 0, x: -12 }}
+        animate={loaded ? { opacity: 1, x: 0 } : { opacity: 0, x: -12 }}
+        transition={{ duration: 0.9, delay: 0.45 }}
+        className="absolute left-4 top-[15%] z-30 flex items-center gap-3 sm:left-6 md:left-16 md:top-[12%] lg:left-24"
+      >
+        <span className="h-px w-6 bg-white/20 sm:w-8" />
+        <span className="font-mono text-[8px] uppercase tracking-[0.28em] text-white/30 sm:text-[9px]">
+          Informatics / Builder
+        </span>
+      </motion.div>
+
       <motion.div
         variants={nameVariants}
         initial="hidden"
@@ -72,7 +85,7 @@ export default function Hero() {
           opacity: nameOpacity,
           filter: nameBlur,
         }}
-        className="absolute left-4 top-[27%] w-[82vw] max-w-[520px] text-left sm:left-6 sm:top-[30%] md:left-16 md:top-[18%] md:w-auto md:max-w-[38vw] lg:left-24"
+        className="absolute left-4 top-[27%] z-20 w-[82vw] max-w-[520px] text-left sm:left-6 sm:top-[30%] md:left-16 md:top-[18%] md:w-auto md:max-w-[38vw] lg:left-24"
       >
         <h1
           className="select-none font-[family-name:var(--font-anton)] uppercase leading-[1.02] tracking-[-0.015em] text-white text-[clamp(2rem,10vw,4.75rem)] sm:text-[clamp(2.35rem,8vw,4.75rem)] md:leading-[1.1] md:text-[clamp(3.5rem,6vw,4.75rem)]"
@@ -93,6 +106,28 @@ export default function Hero() {
             FATHUL MUTTAQIN
           </span>
         </h1>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={loaded ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+          transition={{ duration: 0.8, delay: 0.9 }}
+          className="mt-5 flex max-w-[250px] items-center gap-3 sm:mt-6"
+        >
+          <span className="h-px flex-1 bg-white/10" />
+          <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-white/25">
+            Still building
+          </span>
+        </motion.div>
+      </motion.div>
+
+      {/* Quiet coordinates make the empty space feel intentional */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={loaded ? { opacity: 1 } : { opacity: 0 }}
+        transition={{ duration: 1, delay: 1 }}
+        className="absolute bottom-[15%] left-4 z-30 hidden font-mono text-[8px] uppercase tracking-[0.2em] text-white/20 sm:block md:left-16 lg:left-24"
+      >
+        Digital systems / 2026
       </motion.div>
 
       <motion.div
@@ -100,14 +135,21 @@ export default function Hero() {
         initial="hidden"
         animate={loaded ? "visible" : "hidden"}
         style={{ opacity: indicatorOpacity }}
-        className="absolute bottom-5 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 sm:bottom-8 sm:gap-3"
+        className="absolute bottom-5 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center gap-2 sm:bottom-8 sm:gap-3"
       >
+        <span className="font-mono text-[7px] uppercase tracking-[0.28em] text-white/25 sm:text-[8px]">
+          Scroll to explore
+        </span>
         <motion.div
           animate={{ y: [0, 6, 0], opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
           className="h-6 w-px bg-white/40 sm:h-8"
         />
       </motion.div>
+
+      <div className="absolute bottom-[14%] right-4 z-30 font-mono text-[8px] uppercase tracking-[0.2em] text-white/20 sm:right-6 md:right-16 lg:right-24">
+        01 / 08
+      </div>
     </section>
   );
 }
