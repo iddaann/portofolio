@@ -3,8 +3,6 @@
 import { useEffect, useRef } from "react";
 
 interface Star {
-  x: number;
-  y: number;
   scatteredX: number;
   scatteredY: number;
   heroX: number;
@@ -77,6 +75,7 @@ export default function StarBackground() {
     let pageVisible = !document.hidden;
     let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let finePointer = window.matchMedia("(pointer: fine)").matches;
+    let atmosphere: CanvasGradient | null = null;
 
     let targetMouseX = 0;
     let targetMouseY = 0;
@@ -98,6 +97,15 @@ export default function StarBackground() {
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (width >= 768) {
+        atmosphere = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
+        atmosphere.addColorStop(0, "rgba(45,80,160,0.075)");
+        atmosphere.addColorStop(0.45, "rgba(30,50,120,0.03)");
+        atmosphere.addColorStop(1, "rgba(3,4,10,0)");
+      } else {
+        atmosphere = null;
+      }
     };
 
     const createStars = () => {
@@ -126,8 +134,6 @@ export default function StarBackground() {
         const galaxyY = height / 2 + Math.sin(angle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 20 * radius;
 
         stars.push({
-          x: heroX,
-          y: heroY,
           scatteredX,
           scatteredY,
           heroX,
@@ -197,20 +203,13 @@ export default function StarBackground() {
         smoothMouseY = lerp(smoothMouseY, targetMouseY, 0.04);
       }
 
-      ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = "#03040a";
       ctx.fillRect(0, 0, width, height);
 
-      if (!mobile) {
-        const atmosphere = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.7);
-        atmosphere.addColorStop(0, "rgba(45,80,160,0.075)");
-        atmosphere.addColorStop(0.45, "rgba(30,50,120,0.03)");
-        atmosphere.addColorStop(1, "rgba(3,4,10,0)");
+      if (atmosphere) {
         ctx.fillStyle = atmosphere;
         ctx.fillRect(0, 0, width, height);
       }
-
-      ctx.globalCompositeOperation = "source-over";
 
       for (const star of stars) {
         const formation = currentFormation < 1 ? currentFormation : currentFormation - 1;
@@ -227,8 +226,6 @@ export default function StarBackground() {
           y += Math.cos(seconds * star.twinkleSpeed * 0.7 + star.twinkleOffset) * star.depth * 2 + smoothMouseY * star.depth * 8;
         }
 
-        star.x = x;
-        star.y = y;
         const twinkle = reducedMotion ? 1 : 0.75 + Math.sin(seconds * star.twinkleSpeed + star.twinkleOffset) * 0.25;
         ctx.fillStyle = `rgba(${star.color},${star.opacity * twinkle})`;
         ctx.beginPath();
