@@ -7,6 +7,8 @@ interface Star {
   scatteredY: number;
   burstX: number;
   burstY: number;
+  galaxyX: number;
+  galaxyY: number;
   size: number;
   opacity: number;
   depth: number;
@@ -40,12 +42,15 @@ export default function StarBackground() {
     let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let finePointer = window.matchMedia("(pointer: fine)").matches;
     let atmosphere: CanvasGradient | null = null;
+
     let targetMouseX = 0;
     let targetMouseY = 0;
     let smoothMouseX = 0;
     let smoothMouseY = 0;
     let burstProgress = 0;
     let burstStarted = false;
+    let galaxyProgress = 0;
+    let galaxyVisible = false;
 
     const stars: Star[] = [];
     const starColors = ["225,235,255", "255,255,255", "190,215,255", "210,220,255"];
@@ -74,16 +79,23 @@ export default function StarBackground() {
       stars.length = 0;
       const mobile = width < 768;
       const count = mobile ? MOBILE_STAR_COUNT : DESKTOP_STAR_COUNT;
+      const galaxyWidth = Math.min(width * 0.95, 1350);
+      const galaxyHeight = Math.min(height * 0.52, 620);
 
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const radius = Math.pow(Math.random(), 0.7) * Math.min(width, height) * (mobile ? 0.045 : 0.065);
+        const burstRadius = Math.pow(Math.random(), 0.7) * Math.min(width, height) * (mobile ? 0.045 : 0.065);
+        const radius = Math.pow(Math.random(), 1.15);
+        const arm = Math.floor(Math.random() * 4);
+        const galaxyAngle = (arm / 4) * Math.PI * 2 + radius * Math.PI * 2.8 + (Math.random() - 0.5) * (0.12 + radius * 0.8);
 
         stars.push({
           scatteredX: Math.random() * width,
           scatteredY: Math.random() * height,
-          burstX: width / 2 + Math.cos(angle) * radius,
-          burstY: height / 2 + Math.sin(angle) * radius,
+          burstX: width / 2 + Math.cos(angle) * burstRadius,
+          burstY: height / 2 + Math.sin(angle) * burstRadius,
+          galaxyX: width / 2 + Math.cos(galaxyAngle) * radius * galaxyWidth * 0.5,
+          galaxyY: height / 2 + Math.sin(galaxyAngle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 20 * radius,
           size: Math.random() < 0.08 ? Math.random() * 1.6 + 1.1 : Math.random() * 0.8 + 0.4,
           opacity: Math.random() * 0.5 + 0.25,
           depth: Math.random(),
@@ -100,6 +112,7 @@ export default function StarBackground() {
       createStars();
       burstStarted = false;
       burstProgress = 0;
+      galaxyProgress = 0;
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -124,13 +137,13 @@ export default function StarBackground() {
       raf = requestAnimationFrame(render);
     };
 
-    const hero = document.querySelector("section");
+    const marker = document.getElementById("idan-marker");
     let observer: IntersectionObserver | undefined;
-    if (hero) {
+    if (marker) {
       observer = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) startBurst();
-      }, { threshold: 0.15 });
-      observer.observe(hero);
+        galaxyVisible = entry.isIntersecting;
+      }, { threshold: 0.2 });
+      observer.observe(marker);
     }
 
     const render = (time: number) => {
@@ -154,6 +167,11 @@ export default function StarBackground() {
         burstProgress = reducedMotion ? 1 : Math.min(1, burstProgress + (mobile ? 0.022 : 0.018));
       }
 
+      const galaxyTarget = galaxyVisible && burstProgress >= 1 ? 1 : 0;
+      galaxyProgress = reducedMotion
+        ? galaxyTarget
+        : lerp(galaxyProgress, galaxyTarget, mobile ? 0.055 : 0.035);
+
       if (!reducedMotion) {
         smoothMouseX = lerp(smoothMouseX, targetMouseX, 0.04);
         smoothMouseY = lerp(smoothMouseY, targetMouseY, 0.04);
@@ -168,10 +186,13 @@ export default function StarBackground() {
       }
 
       const easedBurst = 1 - Math.pow(1 - burstProgress, 3);
+      const easedGalaxy = galaxyProgress * galaxyProgress * (3 - 2 * galaxyProgress);
 
       for (const star of stars) {
-        let x = lerp(star.burstX, star.scatteredX, easedBurst);
-        let y = lerp(star.burstY, star.scatteredY, easedBurst);
+        const scatteredX = lerp(star.burstX, star.scatteredX, easedBurst);
+        const scatteredY = lerp(star.burstY, star.scatteredY, easedBurst);
+        let x = lerp(scatteredX, star.galaxyX, easedGalaxy);
+        let y = lerp(scatteredY, star.galaxyY, easedGalaxy);
 
         if (!reducedMotion) {
           const drift = Math.sin(seconds * star.twinkleSpeed + star.twinkleOffset) * 0.35;
@@ -201,7 +222,10 @@ export default function StarBackground() {
     const handleMotionChange = () => {
       reducedMotion = motionQuery.matches;
       lastFrame = 0;
-      if (reducedMotion) burstProgress = 1;
+      if (reducedMotion) {
+        burstProgress = 1;
+        galaxyProgress = galaxyVisible ? 1 : 0;
+      }
     };
     const handlePointerChange = () => {
       finePointer = pointerQuery.matches;
