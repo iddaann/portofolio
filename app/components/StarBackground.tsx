@@ -78,8 +78,6 @@ export default function StarBackground() {
     let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let finePointer = window.matchMedia("(pointer: fine)").matches;
 
-    let targetScroll = window.scrollY;
-    let smoothScroll = targetScroll;
     let targetMouseX = 0;
     let targetMouseY = 0;
     let smoothMouseX = 0;
@@ -152,10 +150,6 @@ export default function StarBackground() {
       createStars();
     };
 
-    const handleScroll = () => {
-      targetScroll = window.scrollY;
-    };
-
     const handlePointerMove = (event: PointerEvent) => {
       if (!finePointer || reducedMotion) return;
       targetMouseX = event.clientX / width - 0.5;
@@ -199,7 +193,6 @@ export default function StarBackground() {
         : lerp(currentFormation, targetFormation, mobile ? 0.07 : 0.045);
 
       if (!reducedMotion) {
-        smoothScroll = lerp(smoothScroll, targetScroll, mobile ? 0.075 : 0.055);
         smoothMouseX = lerp(smoothMouseX, targetMouseX, 0.04);
         smoothMouseY = lerp(smoothMouseY, targetMouseY, 0.04);
       }
@@ -249,7 +242,6 @@ export default function StarBackground() {
     resize();
     createStars();
     window.addEventListener("resize", handleResize, { passive: true });
-    window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
     document.addEventListener("visibilitychange", handleVisibility);
 
@@ -270,7 +262,6 @@ export default function StarBackground() {
       cancelAnimationFrame(raf);
       observer?.disconnect();
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("pointermove", handlePointerMove);
       document.removeEventListener("visibilitychange", handleVisibility);
       motionQuery.removeEventListener("change", handleMotionChange);
