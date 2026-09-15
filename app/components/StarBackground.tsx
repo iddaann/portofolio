@@ -20,12 +20,14 @@ interface Star {
   twinkleOffset: number;
 }
 
-const DESKTOP_STAR_COUNT = 760;
-const MOBILE_STAR_COUNT = 260;
+const DESKTOP_STAR_COUNT = 1100;
+const MOBILE_STAR_COUNT = 320;
 const GALAXY_ROTATION_SPEED = 0.045;
-const GALAXY_TILT = 0.28;
+const GALAXY_TILT = 0.32;
 const GALAXY_VERTICAL_OFFSET = -0.08;
-const GALAXY_CAMERA_ZOOM = 0.018;
+const GALAXY_CAMERA_ZOOM = 0.024;
+const GALAXY_ARMS = 3;
+const GALAXY_TURNS = 1.55;
 
 function lerp(a: number, b: number, amount: number) {
   return a + (b - a) * amount;
@@ -100,75 +102,87 @@ export default function StarBackground() {
       const mobile = width < 768;
       const count = mobile ? MOBILE_STAR_COUNT : DESKTOP_STAR_COUNT;
 
-      // A wide elliptical field keeps the galaxy readable from left to right.
-      const galaxyWidth = Math.min(width * 0.94, 1380);
-      const galaxyHeight = Math.min(height * 0.46, 560);
+      // Wide horizontal composition: the galaxy reads left-to-right while
+      // retaining enough black space around the outer arms.
+      const galaxyWidth = Math.min(width * 0.96, 1420);
+      const galaxyHeight = Math.min(height * 0.38, 470);
 
       for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
+        const randomAngle = Math.random() * Math.PI * 2;
         const burstRadius =
           Math.pow(Math.random(), 0.7) *
           Math.min(width, height) *
           (mobile ? 0.045 : 0.065);
 
-        // Three visual populations: a dense luminous core, curved arms, and
-        // sparse outer particles. This avoids a rigid geometric spiral.
         const population = Math.random();
         let radius: number;
         let galaxyAngle: number;
+        let armStrength = 0;
 
-        if (population < 0.22) {
-          // Core: compact, dense and slightly chaotic.
-          radius = Math.pow(Math.random(), 2.4) * 0.34;
+        if (population < 0.25) {
+          // Compact luminous core. It is intentionally noisy rather than a
+          // perfect circle so the center feels like a real star field.
+          radius = Math.pow(Math.random(), 2.65) * 0.34;
           galaxyAngle = Math.random() * Math.PI * 2;
-        } else if (population < 0.9) {
-          // Main arms: particles sit around a curved logarithmic-like path,
-          // with enough noise to keep the silhouette organic.
-          radius = 0.16 + Math.pow(Math.random(), 0.82) * 0.84;
-          const arm = Math.floor(Math.random() * 3);
-          const armBase = (arm / 3) * Math.PI * 2;
-          const curve = radius * Math.PI * 2.45;
-          const widthNoise = (Math.random() - 0.5) * (0.18 + radius * 0.3);
-          galaxyAngle = armBase + curve + widthNoise;
+        } else if (population < 0.94) {
+          // Main spiral arms. Radius drives the curvature; angular noise is
+          // narrower near the core and wider toward the outer edge.
+          radius = 0.12 + Math.pow(Math.random(), 0.86) * 0.88;
+          const arm = Math.floor(Math.random() * GALAXY_ARMS);
+          const armBase = (arm / GALAXY_ARMS) * Math.PI * 2;
+          const spiral = radius * GALAXY_TURNS * Math.PI * 2;
+          const spread = 0.045 + radius * 0.16;
+          galaxyAngle = armBase + spiral + (Math.random() - 0.5) * spread;
+          armStrength = 1;
         } else {
-          // Outer dust: sparse and deliberately loose, preserving black space.
-          radius = 0.58 + Math.pow(Math.random(), 0.72) * 0.55;
+          // A small population outside the arms gives the silhouette a
+          // natural dusty edge without turning it into a solid disk.
+          radius = 0.52 + Math.pow(Math.random(), 0.65) * 0.5;
           galaxyAngle = Math.random() * Math.PI * 2;
         }
 
         const core = Math.max(0, 1 - radius);
-        const armWave = Math.sin(galaxyAngle * 1.5 + radius * 5.5);
-        const naturalOffset = (Math.random() - 0.5) * (8 + radius * 38);
-        const xRadius = radius * galaxyWidth * (0.43 + Math.random() * 0.1);
-        const yRadius = radius * galaxyHeight * (0.42 + Math.random() * 0.12);
+        const radialScale = radius * (0.86 + Math.random() * 0.14);
+        const xRadius = radialScale * galaxyWidth * 0.5;
+        const yRadius = radialScale * galaxyHeight * 0.5;
 
         let galaxyX = Math.cos(galaxyAngle) * xRadius;
         let galaxyY = Math.sin(galaxyAngle) * yRadius;
 
-        // Slightly pull particles toward curved arm ridges without making
-        // the arms look like four perfect mathematical lines.
-        galaxyX += armWave * (6 + radius * 13) + naturalOffset * 0.45;
-        galaxyY += naturalOffset + armWave * (4 + radius * 7);
-
-        if (population < 0.22) {
-          galaxyX += (Math.random() - 0.5) * 48 * core;
-          galaxyY += (Math.random() - 0.5) * 32 * core;
+        if (armStrength) {
+          // Break the mathematical line into small star clouds. The offset is
+          // stronger outside the core, making the arms curved but organic.
+          const cloud = Math.sin(radius * 31 + galaxyAngle * 2.4 + randomAngle) *
+            (5 + radius * 20);
+          galaxyX += cloud * 0.7;
+          galaxyY += cloud * 0.34;
         }
 
+        // Give the core a little volume and keep the outer region airy.
+        const localNoise = (Math.random() - 0.5) * (10 + radius * 28);
+        galaxyX += localNoise * 0.55;
+        galaxyY += localNoise;
+
+        if (population < 0.25) {
+          galaxyX += (Math.random() - 0.5) * 44 * core;
+          galaxyY += (Math.random() - 0.5) * 30 * core;
+        }
+
+        const isGold = Math.random() < 0.018;
         const starSize =
-          Math.random() < 0.07
-            ? Math.random() * 1.65 + 1.15 + core * 0.35
-            : Math.random() * 0.82 + 0.38 + core * 0.13;
+          Math.random() < 0.065
+            ? Math.random() * 1.7 + 1.1 + core * 0.4
+            : Math.random() * 0.82 + 0.38 + core * 0.14;
         const starOpacity = Math.min(
-          0.9,
-          Math.random() * 0.48 + 0.28 + core * 0.18,
+          0.92,
+          Math.random() * 0.5 + 0.27 + core * 0.2,
         );
 
         stars.push({
           scatteredX: Math.random() * width,
           scatteredY: Math.random() * height,
-          burstX: width / 2 + Math.cos(angle) * burstRadius,
-          burstY: height / 2 + Math.sin(angle) * burstRadius,
+          burstX: width / 2 + Math.cos(randomAngle) * burstRadius,
+          burstY: height / 2 + Math.sin(randomAngle) * burstRadius,
           galaxyX: width / 2 + galaxyX,
           galaxyY: height / 2 + galaxyY,
           galaxyRadius: Math.min(1, radius),
@@ -176,8 +190,10 @@ export default function StarBackground() {
           size: starSize,
           opacity: starOpacity,
           depth: Math.random(),
-          bright: Math.random() < 0.055,
-          color: starColors[Math.floor(Math.random() * starColors.length)],
+          bright: Math.random() < 0.06,
+          color: isGold
+            ? "255,220,145"
+            : starColors[Math.floor(Math.random() * 5)],
           twinkleSpeed: Math.random() * 0.8 + 0.2,
           twinkleOffset: Math.random() * Math.PI * 2,
         });
@@ -295,8 +311,6 @@ export default function StarBackground() {
         const orbitalX = offsetX * cos - offsetY * sin;
         const orbitalY = offsetX * sin + offsetY * cos;
 
-        // The disk is viewed slightly from above. Outer particles flatten a
-        // little more than the core, giving the galaxy a subtle 3D presence.
         const perspective = 1 - star.galaxyRadius * GALAXY_TILT;
         const projectedX = orbitalX * cameraZoom;
         const projectedY = orbitalY * perspective * cameraZoom;
@@ -326,8 +340,6 @@ export default function StarBackground() {
         const alpha = Math.min(1, star.opacity * twinkle * burstGlow);
         const size = star.bright ? star.size * 1.15 : star.size;
 
-        // A second, very faint disc behind brighter stars creates bloom without
-        // the expensive per-particle shadowBlur path.
         if (star.bright && galaxyProgress > 0.55) {
           ctx.fillStyle = `rgba(${star.color},${alpha * 0.08})`;
           ctx.beginPath();
