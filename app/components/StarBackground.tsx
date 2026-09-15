@@ -26,12 +26,13 @@ interface Particle {
 
 const DESKTOP_COUNT = 2400;
 const MOBILE_COUNT = 700;
+const SCATTERED_DESKTOP_COUNT = 360;
+const SCATTERED_MOBILE_COUNT = 150;
 const ARMS = 2;
 const SPIRAL_TURNS = 1.75;
 const BURST_SPEED = 0.032;
 const GALAXY_BLEND_SPEED = 0.055;
-// Fast enough to visibly travel around the orbit, while still feeling calm.
-const ORBIT_SPEED = 0.0045;
+const ORBIT_SPEED = 0.0008;
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
@@ -213,8 +214,7 @@ export default function StarBackground() {
           orbitPhase: Math.random() * Math.PI * 2,
           orbitEccentricity: 0.92 + Math.random() * 0.16,
           orbitWobble: 0.015 + Math.random() * 0.035,
-          // Inner stars complete their orbit faster; outer stars move more slowly.
-          speed: ORBIT_SPEED * (0.8 + (1 - radius) * 1.2) * (0.75 + Math.random() * 0.5),
+          speed: ORBIT_SPEED * (0.35 + radius * 0.9) * (0.7 + Math.random() * 0.6),
           size: largeStar
             ? 1.35 + Math.random() * 1.05 + (1 - radius) * 0.18
             : 0.42 + Math.random() * 0.82 + (1 - radius) * 0.08,
@@ -277,14 +277,22 @@ export default function StarBackground() {
 
       gl.clear(gl.COLOR_BUFFER_BIT);
 
-      const positions = new Float32Array(particles.length * 3);
-      const sizes = new Float32Array(particles.length);
-      const alphas = new Float32Array(particles.length);
-      const colors = new Float32Array(particles.length * 3);
-      const burstEase = 1 - Math.pow(1 - burstProgress, 3);
       const galaxyEase = smoothstep(galaxyProgress);
+      const baseCount = mobile ? SCATTERED_MOBILE_COUNT : SCATTERED_DESKTOP_COUNT;
+      const fullCount = particles.length;
+      const revealEase = galaxyEase * galaxyEase * (3 - 2 * galaxyEase);
+      const activeCount = Math.min(
+        fullCount,
+        Math.max(baseCount, Math.floor(lerp(baseCount, fullCount, revealEase)))
+      );
 
-      for (let i = 0; i < particles.length; i++) {
+      const positions = new Float32Array(activeCount * 3);
+      const sizes = new Float32Array(activeCount);
+      const alphas = new Float32Array(activeCount);
+      const colors = new Float32Array(activeCount * 3);
+      const burstEase = 1 - Math.pow(1 - burstProgress, 3);
+
+      for (let i = 0; i < activeCount; i++) {
         const p = particles[i];
         const scatteredX = lerp(p.burstX, p.scatteredX, burstEase);
         const scatteredY = lerp(p.burstY, p.scatteredY, burstEase);
@@ -353,7 +361,7 @@ export default function StarBackground() {
 
       gl.uniform1f(pointScaleLocation, Math.min(width, height) * 0.007 * dpr);
       gl.uniform2f(resolutionLocation, width, height);
-      gl.drawArrays(gl.POINTS, 0, particles.length);
+      gl.drawArrays(gl.POINTS, 0, activeCount);
 
       frame = requestAnimationFrame(render);
     };
