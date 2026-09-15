@@ -18,7 +18,8 @@ interface Star {
   twinkleOffset: number;
 }
 
-const HERO_BOX = { left: 30, top: 28, width: 40, height: 40 };
+// The hero star formation sits beneath the main name and acts as a personal signature.
+const HERO_BOX = { left: 30, top: 42, width: 30, height: 12 };
 const DESKTOP_STAR_COUNT = 420;
 const MOBILE_STAR_COUNT = 190;
 const HERO_STAR_COUNT = 260;
@@ -112,7 +113,7 @@ export default function StarBackground() {
       stars.length = 0;
       const mobile = width < 768;
       const count = mobile ? MOBILE_STAR_COUNT : DESKTOP_STAR_COUNT;
-      const heroPoints = mobile ? [] : sampleTextPoints("13", 500, 300, 210, HERO_STAR_COUNT);
+      const heroPoints = mobile ? [] : sampleTextPoints("IDAN", 500, 300, 110, HERO_STAR_COUNT);
       const galaxyWidth = Math.min(width * 0.95, 1350);
       const galaxyHeight = Math.min(height * 0.52, 620);
 
