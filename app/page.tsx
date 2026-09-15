@@ -8,7 +8,6 @@ import NameStars from "./components/NameStars";
 import About from "./components/About";
 import Contact from "./components/Contact";
 import StarBackground from "./components/StarBackground";
-import ShootingStars from "./components/ShootingStars";
 import ScrollProgress from "./components/ScrollProgress";
 import Preloader from "./components/Preloader";
 import ScrollExit from "./components/ScrollExit";
@@ -28,7 +27,6 @@ export default function Home() {
         <Preloader />
         <ScrollProgress />
         <StarBackground />
-        <ShootingStars />
 
         <div className="relative">
           <HeroVisual />
