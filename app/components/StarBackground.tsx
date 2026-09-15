@@ -22,6 +22,8 @@ interface Star {
 const DESKTOP_STAR_COUNT = 560;
 const MOBILE_STAR_COUNT = 230;
 const GALAXY_ROTATION_SPEED = 0.045;
+const GALAXY_TILT = 0.28;
+const GALAXY_VERTICAL_OFFSET = -0.08;
 
 function lerp(a: number, b: number, amount: number) {
   return a + (b - a) * amount;
@@ -177,12 +179,10 @@ export default function StarBackground() {
       }
 
       if (burstStarted && burstProgress < 1) {
-        // Speed up the initial burst without making it feel abrupt.
         burstProgress = reducedMotion ? 1 : Math.min(1, burstProgress + (mobile ? 0.032 : 0.027));
       }
 
       const galaxyTarget = galaxyVisible && burstProgress >= 1 ? 1 : 0;
-      // Faster formation: the galaxy settles in sooner while remaining smooth.
       galaxyProgress = reducedMotion
         ? galaxyTarget
         : lerp(galaxyProgress, galaxyTarget, mobile ? 0.09 : 0.065);
@@ -207,17 +207,28 @@ export default function StarBackground() {
         const scatteredX = lerp(star.burstX, star.scatteredX, easedBurst);
         const scatteredY = lerp(star.burstY, star.scatteredY, easedBurst);
 
-        // Each star travels along its own original orbital path around the
-        // center. The galaxy silhouette is preserved, but the stars move
-        // through the arms instead of making the whole galaxy spin like one
-        // rigid image.
+        // Orbit each star around the galaxy center. The whole galaxy is also
+        // presented with a subtle upward perspective tilt, so the arms read
+        // horizontally from left to right rather than as a flat top-down disk.
         const offsetX = star.galaxyX - width / 2;
         const offsetY = star.galaxyY - height / 2;
-        const rotation = reducedMotion ? 0 : seconds * GALAXY_ROTATION_SPEED * (0.35 + star.galaxyRadius * 0.65) * easedGalaxy;
+        const rotation = reducedMotion
+          ? 0
+          : seconds * GALAXY_ROTATION_SPEED * (0.35 + star.galaxyRadius * 0.65) * easedGalaxy;
         const cos = Math.cos(rotation);
         const sin = Math.sin(rotation);
-        const orbitalGalaxyX = width / 2 + offsetX * cos - offsetY * sin;
-        const orbitalGalaxyY = height / 2 + offsetX * sin + offsetY * cos;
+        const orbitalX = offsetX * cos - offsetY * sin;
+        const orbitalY = offsetX * sin + offsetY * cos;
+
+        // Apply perspective around the horizontal axis. The outer arms are
+        // slightly compressed vertically, creating a subtle "view from above".
+        const perspective = 1 - star.galaxyRadius * GALAXY_TILT;
+        const projectedX = orbitalX;
+        const projectedY = orbitalY * perspective;
+
+        const galaxyCenterY = height / 2 + height * GALAXY_VERTICAL_OFFSET;
+        const orbitalGalaxyX = width / 2 + projectedX;
+        const orbitalGalaxyY = galaxyCenterY + projectedY;
 
         let x = lerp(scatteredX, orbitalGalaxyX, easedGalaxy);
         let y = lerp(scatteredY, orbitalGalaxyY, easedGalaxy);
