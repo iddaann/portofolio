@@ -9,9 +9,6 @@ interface Star {
   burstY: number;
   galaxyX: number;
   galaxyY: number;
-  galaxyAngle: number;
-  galaxyRadiusX: number;
-  galaxyRadiusY: number;
   galaxySpeed: number;
   size: number;
   opacity: number;
@@ -92,24 +89,17 @@ export default function StarBackground() {
         const radius = Math.pow(Math.random(), 1.15);
         const arm = Math.floor(Math.random() * 4);
         const galaxyAngle = (arm / 4) * Math.PI * 2 + radius * Math.PI * 2.8 + (Math.random() - 0.5) * (0.12 + radius * 0.8);
-        const galaxyRadiusX = Math.cos(galaxyAngle) * radius * galaxyWidth * 0.5;
-        const galaxyRadiusY = Math.sin(galaxyAngle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 20 * radius;
-        const normalizedRadius = Math.min(1, Math.max(0, radius));
-
-        // Inner stars orbit a little faster than outer stars, giving the galaxy
-        // a subtle differential-rotation feel instead of a rigid spinner.
-        const galaxySpeed = lerp(0.18, 0.055, normalizedRadius) * (0.88 + Math.random() * 0.24);
+        const galaxyX = width / 2 + Math.cos(galaxyAngle) * radius * galaxyWidth * 0.5;
+        const galaxyY = height / 2 + Math.sin(galaxyAngle) * radius * galaxyHeight * 0.5 + (Math.random() - 0.5) * 20 * radius;
+        const galaxySpeed = lerp(0.18, 0.055, radius) * (0.88 + Math.random() * 0.24);
 
         stars.push({
           scatteredX: Math.random() * width,
           scatteredY: Math.random() * height,
           burstX: width / 2 + Math.cos(angle) * burstRadius,
           burstY: height / 2 + Math.sin(angle) * burstRadius,
-          galaxyX: width / 2 + galaxyRadiusX,
-          galaxyY: height / 2 + galaxyRadiusY,
-          galaxyAngle: Math.atan2(galaxyRadiusY, galaxyRadiusX),
-          galaxyRadiusX,
-          galaxyRadiusY,
+          galaxyX,
+          galaxyY,
           galaxySpeed,
           size: Math.random() < 0.08 ? Math.random() * 1.6 + 1.1 : Math.random() * 0.8 + 0.4,
           opacity: Math.random() * 0.5 + 0.25,
@@ -207,13 +197,16 @@ export default function StarBackground() {
         const scatteredX = lerp(star.burstX, star.scatteredX, easedBurst);
         const scatteredY = lerp(star.burstY, star.scatteredY, easedBurst);
 
-        // Rotate each star around the galaxy center only as the galaxy forms.
-        // This keeps the burst/scatter transition untouched and lets the galaxy
-        // settle into a slow, continuous orbit afterward.
+        // Keep the original galaxy coordinates intact, then rotate the entire
+        // offset vector around the center. This preserves the spiral arms and
+        // natural thickness instead of turning the galaxy into a simple ring.
+        const offsetX = star.galaxyX - width / 2;
+        const offsetY = star.galaxyY - height / 2;
         const rotation = reducedMotion ? 0 : seconds * star.galaxySpeed * easedGalaxy;
-        const rotatedAngle = star.galaxyAngle + rotation;
-        const rotatedGalaxyX = width / 2 + Math.cos(rotatedAngle) * Math.abs(star.galaxyRadiusX);
-        const rotatedGalaxyY = height / 2 + Math.sin(rotatedAngle) * Math.abs(star.galaxyRadiusY);
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const rotatedGalaxyX = width / 2 + offsetX * cos - offsetY * sin;
+        const rotatedGalaxyY = height / 2 + offsetX * sin + offsetY * cos;
 
         let x = lerp(scatteredX, rotatedGalaxyX, easedGalaxy);
         let y = lerp(scatteredY, rotatedGalaxyY, easedGalaxy);
