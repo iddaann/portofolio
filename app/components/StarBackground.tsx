@@ -32,7 +32,7 @@ const ARMS = 2;
 const SPIRAL_TURNS = 1.75;
 const BURST_SPEED = 0.032;
 const GALAXY_BLEND_SPEED = 0.055;
-const ORBIT_SPEED = 0.0008;
+const ORBIT_SPEED = 0;
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
